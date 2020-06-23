@@ -32,7 +32,7 @@ def RSAEncodeData(data, public_key):
 
 
 # 使用自己的私钥文件,来解密信息,并返回解密信息
-def RSADecodeData(data, private_key_file_dir):
+def RSADecodeData(data, private_key):
     return rsa.decrypt(base64.standard_b64decode(data.replace("$", "/")), private_key)
 
 

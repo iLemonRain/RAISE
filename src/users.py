@@ -1,5 +1,7 @@
 # 本脚本定义了发送方和接收方的整体操作.
 # 对单个数据分片的操作,如数据包的编码解码过程,请见files.py
+import os
+import glob
 import random
 import string
 import math
@@ -28,7 +30,7 @@ class Peer(object):
     plain_data = ""                 # 未加密的整段文本
     plain_data_fragment_list = []   # 未加密的数据分片的列表(包含数据分片和掩护流量分片)
     # 和传输的所有数据包的构成有关
-    packet_element_list = []           # 记录各个包里面所有的未加密内容
+    packet_element_list = []        # 所有经过发送方或者接收方处理(添加/忽略掩护流量分片)后的包元素列表
 
     # 设置发送方的姓名或代号
     def SetSenderName(self, sender_name):
@@ -46,10 +48,14 @@ class Peer(object):
     def GetReceiverName(self):
         return self.receiver_name
 
-    # 设置本地仓库位置
+    # 设置本地仓库
     def SetRepo(self, repo_dir, repo_href):
         self.repo_dir = repo_dir
         self.repo = repotools.SetRepo(repo_dir, repo_href)
+
+    # 获得所有未加密的数据包元素列表,用来生成一个个数据包
+    def GetPacketElementList(self):
+        return self.packet_element_list
 
 
 # 发送方的属性和基本方法
@@ -110,13 +116,8 @@ class Sender(Peer):
             packet_element['sn_of_fragment'] = i
             packet_element['more_fragment'] = 0 if i == len(self.plain_data_fragment_list) - 1 else 1
             packet_element['data'] = self.plain_data_fragment_list[i]['data']
-            packet_element['receiver_public_key'] = self.receiver_public_key
             packet_element['repo_dir'] = self.repo_dir
             self.packet_element_list.append(packet_element)
-
-    # 获得所有未加密的数据包元素列表,用来生成一个个数据包
-    def GetPacketElementList(self):
-        return self.packet_element_list
 
     # 添加一个被加密的的文件的位置到列表里面
     def AddToEncryptedFileDirList(self, encrypted_file_dir):
@@ -135,6 +136,10 @@ class Sender(Peer):
 
 # 接收方的属性和基本方法
 class Receiver(Peer):
+
+    ExistentFileNameList = []   # 已经存在的所有文件名的列表
+    NewAddFileNameList = []     # 新添加的文件名的列表
+
     # 构造函数
     def __init__(self):
         pass
@@ -149,11 +154,22 @@ class Receiver(Peer):
 
     # 从仓库接收所有被加密的文件
     def ReceiveEncryptedFileList(self, platform):
-        # 平台采用Github的话,刚刚pull下来的文件路径是相对于git仓库的路径
+        # 记录pull操作之前,文件夹里面都有什么文件
+        file_dir_dict_before = dict([(f, None) for f in glob.glob(os.path.join(self.repo_dir, '*'))])
+        # 每次处理的仅仅是最新这次pull下来的文件
         if platform == "Github":
-            encrypted_file_relative_dir_list = []
-            repotools.PushFileList(self.repo, encrypted_file_relative_dir_list)
-            for encrypted_file_dir in self.encrypted_file_dir_list:
-                encrypted_file_relative_dir = encrypted_file_dir.lstrip(self.repo_dir + "/")
-                encrypted_file_relative_dir_list.append(encrypted_file_relative_dir)
-            
+            repotools.PullAllFiles(self.repo)
+            file_dir_dict_after = dict([(f, None) for f in glob.glob(os.path.join(self.repo_dir, '*'))])
+            self.encrypted_file_dir_list = [f for f in file_dir_dict_after if f not in file_dir_dict_before]
+
+    # 检查当前有没有接收完所有的包
+    def CheckIntegrity(self):
+        sn_list = [packet_element['sn_of_fragment'] for packet_element in self.packet_element_list]
+        max_sn = max(sn_list)
+        # 判断是否已经收到了max_sn之前的所有包,如果是的话检查max_sn对应的包是不是最后一个包
+        if set(sn_list) == set([i for i in range(1, max_sn + 1)]):
+            for packet_element in self.packet_element_list:
+                if packet_element['sn_of_fragment'] == max_sn:
+                    if packet_element['more_fragment'] == 0:
+                        return True # 已经是最后一个包,证明接收完全
+        return False

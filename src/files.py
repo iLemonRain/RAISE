@@ -12,13 +12,15 @@ class Packet(object):
     # type_of_use = -1              # 本报文用途.0为传输数据,1为发起握手,2为回应握手
     full_data_length = -1           # 本报文中的data在组合完全后的长度
     identification = -1             # 标识.完整的报文的所有切片都具有统一的标识
-    fragment_data_length = -1       # 本切片的塔塔部分长度
+    fragment_data_length = -1       # 本切片的数据部分长度
     sn_of_fragment = -1             # 本切片的编号
     more_fragment = -1              # MF,是否还有分片位,1表示后面还有分片,0表示已经是最后分片
     data = ""                       # 数据部分
     # 秘钥
+    sender_public_key = ""          # 发送方的公钥
     sender_private_key = ""         # 发送方的私钥
     receiver_public_key = ""        # 接收方的公钥
+    receiver_private_key = ""       # 接收方的私钥
     symmetric_key = ""              # 用于加密数据的对称秘钥
     # 仓库地址
     repo_dir = ""                   # 交流用的仓库的地址
@@ -48,7 +50,7 @@ class Packet(object):
 # 对"单个"数据分片加上头部后加密,使之变成一个数据包,随后隐写入文件
 class FileEncoder(Packet):
     # 构造函数
-    def __init__(self, packet_element):
+    def __init__(self, packet_element, receiver_public_key):
         # 包的组成元素
         self.sender_name = packet_element['sender_name']
         self.receiver_name = packet_element['receiver_name']
@@ -60,7 +62,7 @@ class FileEncoder(Packet):
         self.more_fragment = packet_element['more_fragment']
         self.data = packet_element['data']
         # 秘钥
-        self.receiver_public_key = packet_element['receiver_public_key']
+        self.receiver_public_key = receiver_public_key
         # 仓库地址
         self.repo_dir = packet_element['repo_dir']
         # 获得加密的头部和数据
@@ -98,11 +100,14 @@ class FileEncoder(Packet):
 
 # 对"单个"数据包的解隐写和解密处理
 class FileDecoder(FileEncoder):
+    # 构造函数
+    def __init__(self, encrypted_file_dir, receiver_private_key):
+        self.encrypted_file_dir = encrypted_file_dir
+        self.encrypted_packet_header = os.path.splitext(os.path.split(encrypted_file_dir)[1])[0] # 从文件路径当中提取出不带后缀的文件名
+        self.unencrypted_packet_header = cryptotools.RSADecodeData(receiver_private_key)
+
     # 将隐写的文件解包
-    def UnwrapStegedFileProgress(self, encrypted_file):
-        # packet = ""
-        # ...
-        # return packet
+    def CheckNameAndCoverTraffic(self, sender_name, receiver_name):
         pass
 
     # 将数据解密,返回解密的数据

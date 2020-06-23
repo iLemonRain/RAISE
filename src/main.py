@@ -2,6 +2,7 @@
 from files import FileEncoder, FileDecoder
 from users import Sender, Receiver
 import os
+import time
 
 if __name__ == '__main__':
     # 不管用户从什么位置用终端执行此py文件,都将根目录设置为此工程根目录
@@ -25,7 +26,7 @@ if __name__ == '__main__':
     sender.SetPacketElementList()
     # 将每个分片的组成元素加入文件里面,并发送
     for packet_element in sender.GetPacketElementList():
-        encoder = FileEncoder(packet_element)
+        encoder = FileEncoder(packet_element, sender.GetReceiverPublicKey())
         encoder.GenerateEncryptedFile()
         sender.AddToEncryptedFileDirList(encoder.GetEncryptedFileDir())
     # 发送所有被加密的文件到仓库
@@ -40,17 +41,21 @@ if __name__ == '__main__':
     # receiver.SetRepo("./repo", "https://github.com/iLemonRain/testgithubcovertcommunication.git")
     # # 设定接收方私钥
     # receiver.SetReceiverPrivateKey("./config/privatekey.pem")
-    # # 从仓库接收所有被加密的文件
-    # receiver.ReceiveEncryptedFileList(platform="Github")
-    # # 从接收到的被加密文件列表中找到本接受者对象想要的内容(发送方和接收方都要求对的上设定)
-    # for encrypted_file_dir in receiver.GetEncryptedFileDirList():
-    #     decoder = FileDecoder(encrypted_file_dir)
-    #     # 判断发送者和接收者是不是对的人,以及是不是掩护流量,如果符合条件的话才对这个文件进行处理
-    #     if decoder.CheckNameAndCoverTraffic() is True:
-    #         decoder.GenerateUnencryptedFile(encrypted_file_dir)
-    #         decoder.AddToPacketElementList(decoder.GetUnencryptedFileDir())
-    # # 判断是不是已经把整个接收内容都接受完全
-    # if decoder.CheckIntegrity(decoder.GetPacketElementList()) is True:
-    #     decoder.SortPacketElementList(decoder.GetPacketElementList())
-    #     decoder.SetPlainText(decoder.GetPacketElementList())
+    # while True:
+    #     # 从仓库pull最新的被加密的文件,并生成加密文件列表
+    #     receiver.ReceiveEncryptedFileList(platform="Github")
+    #     # 从接收到的被加密文件列表中找到本接受者对象想要的内容(发送方和接收方都要求对的上设定)
+    #     for encrypted_file_dir in receiver.GetEncryptedFileDirList():
+    #         decoder = FileDecoder(encrypted_file_dir, receiver.GetReceiverPrivateKey())
+    #         # 判断发送者和接收者是不是对的人,以及是不是掩护流量,如果符合条件的话才对这个文件进行处理
+    #         if decoder.CheckNameAndCoverTraffic(receiver.GetSenderName(), receiver.GetReceiverName()) is True:
+    #             decoder.GenerateUnencryptedFile(encrypted_file_dir)
+    #             receiver.AddToPacketElementList(decoder.GetUnencryptedFileDir())
+    #     # 判断是不是已经把所有包都接受完全
+    #     if receiver.CheckIntegrity() is True:
+    #         break
+    #     else:
+    #         time.sleep(3000)
+    # receiver.SortPacketElementList()
+    # receiver.GeneratePlainText()
     # print(decoder.GetPlainText())
