@@ -29,7 +29,6 @@ if __name__ == '__main__':
         encoder = FileEncoder(packet_element, sender.GetReceiverPublicKey())
         encoder.GenerateEncryptedFile()
         sender.AddToEncryptedFileDirList(encoder.GetEncryptedFileDir())
-    print(sender.encrypted_file_dir_list)
     # 发送所有被加密的文件到仓库
     sender.SendEncryptedFileList(platform="Github")
 

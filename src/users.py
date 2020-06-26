@@ -32,7 +32,6 @@ class Peer(object):
         self.plain_data = ""                 # 未加密的整段文本
         self.plain_data_fragment_list = []   # 未加密的数据分片的列表(包含数据分片和掩护流量分片)
         # 和传输的数据包的构成有关
-        self.packet_element = {}             # 单个包的所有元素
         self.packet_element_list = []        # 所有经过发送方或者接收方处理(添加/忽略掩护流量分片)后的包元素列表
 
     # 设置发送方的姓名或代号
@@ -109,17 +108,18 @@ class Sender(Peer):
     # 生成一系列要发送包的组成元素(头部和未加密的数据部分)的列表
     def GeneratePacketElementList(self):
         for i in range(0, len(self.plain_data_fragment_list)):
-            self.packet_element['sender_name'] = self.sender_name
-            self.packet_element['receiver_name'] = self.receiver_name
-            self.packet_element['cover_traffic'] = self.plain_data_fragment_list[i]['cover_traffic']
-            self.packet_element['full_data_length'] = len(self.plain_data)
-            self.packet_element['identification'] = 1
-            self.packet_element['fragment_data_length'] = len(self.plain_data_fragment_list[i]['data'])
-            self.packet_element['sn_of_fragment'] = i
-            self.packet_element['more_fragment'] = 0 if i == len(self.plain_data_fragment_list) - 1 else 1
-            self.packet_element['data'] = self.plain_data_fragment_list[i]['data']
-            self.packet_element['repo_dir'] = self.repo_dir
-            self.packet_element_list.append(self.packet_element)
+            packet_element = {}
+            packet_element['sender_name'] = self.sender_name
+            packet_element['receiver_name'] = self.receiver_name
+            packet_element['cover_traffic'] = self.plain_data_fragment_list[i]['cover_traffic']
+            packet_element['full_data_length'] = len(self.plain_data)
+            packet_element['identification'] = 1
+            packet_element['fragment_data_length'] = len(self.plain_data_fragment_list[i]['data'])
+            packet_element['sn_of_fragment'] = i
+            packet_element['more_fragment'] = 0 if i == len(self.plain_data_fragment_list) - 1 else 1
+            packet_element['data'] = self.plain_data_fragment_list[i]['data']
+            packet_element['repo_dir'] = self.repo_dir
+            self.packet_element_list.append(packet_element)
 
     # 添加一个被加密的的文件的位置到列表里面
     def AddToEncryptedFileDirList(self, encrypted_file_dir):
@@ -133,7 +133,6 @@ class Sender(Peer):
             for encrypted_file_dir in self.encrypted_file_dir_list:
                 encrypted_file_name = ''.join(os.path.splitext(os.path.split(encrypted_file_dir)[1])) # 为了方便push,只提取文件名
                 encrypted_file_name_list.append(encrypted_file_name)
-            print(encrypted_file_name_list)
             repotools.PushFileList(self.repo, encrypted_file_name_list)
 
 

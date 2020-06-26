@@ -19,7 +19,6 @@ def SetRepo(dir, href):
 
 # 推送仓库中的所有文件
 def PushFileList(repo, encrypted_file_dir_list):
-    print(encrypted_file_dir_list)
     try:
         repo.index.add(encrypted_file_dir_list)
         commit_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
