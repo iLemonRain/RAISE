@@ -19,6 +19,7 @@ def SetRepo(dir, href):
 
 # 推送仓库中的所有文件
 def PushFileList(repo, encrypted_file_dir_list):
+    print(encrypted_file_dir_list)
     try:
         repo.index.add(encrypted_file_dir_list)
         commit_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
@@ -48,6 +49,6 @@ def GetDiffFileDirList(repo):
 
 if __name__ == '__main__':
     repo = SetRepo('./repo', "https://github.com/iLemonRain/testgithubcovertcommunication.git")
-    print(GetDiffFileDirList(repo))
-    # file_list = ["beSPAewd0ESfbwJo5$eK10Y1pUglLbk7+piZQCl0zj4v$x2PyO$dkVM3l0m3vs70yDOxQC$jZhyQF1$VynviyQ==", "c4QqA1qzeqnnjtMQrTjBqqRcNIdLXxZ4wpnOuYUxgQ9Mw+n6aUFWQSTZYXSkhsv7N0PNKLuprQ9k9jwAYS6yAQ=="]
-    # PushFileList(repo, file_list)
+    # print(GetDiffFileDirList(repo))
+    file_list = ['F2bSfGXMzzGnrpfq7xJp6NGLcH5tf7kZJarw6bPXxYQm5PnnVofx9PqHPpREJW1dtZ4yFZcAgA6OLQp$wpFMUQ==', 'fVsfdZ1z6A3jIsoyOCw6qVmowkUrl60viyxj1P6oHwK018YiAGw$sR87GTdNbNTCvut5PBT2491TU94L$KmEPA==', 'TXfaE0SHZq6NvA62TRy+QoQQoYBbhh7P7vew+oLehtDyyOst8tBciXWj$pXO64yj26fv6cnVnercwK2bEXJo7Q==', 'fKWXBVDHjCHvF6LQi73r3Rx$bgS3FlwQGqTLpqLqCg7kcKmeFE9UfgiEhR4zerqcehKc3U0G+gPG0ACN$u4DMw==', 'N$IW$hBoFHTfx5tm4MoDK11lsPEUljqbpePOJM3K8j7QR5XQ+iEs5ymx9vhnq6OcsdVfJmIsqRn5rdma$GZ9DA==', 'ppcrG6ihE+qSMnY4lIKMvJklryYiHPONrRIj56hMc2YiqQDe1vFjmw7RDKpZWlF+fIKSzxj0k+9mAZwEFOjQ7g==', 'IR4kYGQy89oyy0Ld5DWbNyE4mDebNh9wYV8amjuVNmvAKviwkddrO1vw+0sAusc9faf6IY$JYrlsc5wrvBP96w==', 'a6JTVDX2ZfZ92O02zwf8UzHjakwv3MboUsUw69JF1E9UAhG+DcGni9rbOCqGpG2D550ojdEBtOkPFje4R1L1yg==']
+    PushFileList(repo, file_list)

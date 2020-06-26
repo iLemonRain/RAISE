@@ -33,8 +33,12 @@ import glob
 #         print("Removed: ", ", ".join(removed))
 #     before = after
 
-encrypted_file_dir = "/Users/iLemonRain/Documents/python projects/RAISE/repo/3.id0"
-encrypted_file = os.path.split(encrypted_file_dir)[1] # 从文件路径当中提取出文件名
-print(encrypted_file)
-encrypted_packet_header = os.path.splitext(encrypted_file)[0]
-print(encrypted_packet_header)
+# encrypted_file_dir = "/Users/iLemonRain/Documents/python projects/RAISE/repo/3.id0"
+# encrypted_file = os.path.split(encrypted_file_dir)[1] # 从文件路径当中提取出文件名
+# print(encrypted_file)
+# encrypted_packet_header = os.path.splitext(encrypted_file)[0]
+# print(encrypted_packet_header)
+before = "./repo/pkPWO"
+print(before)
+after = before.lstrip("./repo/")
+print(after)

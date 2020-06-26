@@ -15,7 +15,7 @@ if __name__ == '__main__':
     sender.SetSenderName("lemon")
     sender.SetReceiverName("cherry")
     # 设定仓库信息
-    sender.SetRepo("./repo", "https://github.com/iLemonRain/testgithubcovertcommunication.git")
+    sender.SetRepo('./repo', "https://github.com/iLemonRain/testgithubcovertcommunication.git")
     # 设定接收方公钥
     sender.SetReceiverPublicKey("./config/publickey.pem")
     # 在当前的测试中,暂不涉及传输文件,只传输一段文字
@@ -23,12 +23,13 @@ if __name__ == '__main__':
     # 设定单个数据分片的长度为100个字符,并进行分片,掩护流量比率为1:1
     sender.SetFragmentList(100, 1)
     # 设定一系列要发送包的组成元素(头部和未加密的数据部分)的列表
-    sender.SetPacketElementList()
+    sender.GeneratePacketElementList()
     # 将每个分片的组成元素加入文件里面,并发送
     for packet_element in sender.GetPacketElementList():
         encoder = FileEncoder(packet_element, sender.GetReceiverPublicKey())
         encoder.GenerateEncryptedFile()
         sender.AddToEncryptedFileDirList(encoder.GetEncryptedFileDir())
+    print(sender.encrypted_file_dir_list)
     # 发送所有被加密的文件到仓库
     sender.SendEncryptedFileList(platform="Github")
 
@@ -44,18 +45,24 @@ if __name__ == '__main__':
     # while True:
     #     # 从仓库pull最新的被加密的文件,并生成加密文件列表
     #     receiver.ReceiveEncryptedFileList(platform="Github")
+    #     # print(receiver.GetEncryptedFileDirList())
     #     # 从接收到的被加密文件列表中找到本接受者对象想要的内容(发送方和接收方都要求对的上设定)
     #     for encrypted_file_dir in receiver.GetEncryptedFileDirList():
     #         decoder = FileDecoder(encrypted_file_dir, receiver.GetReceiverPrivateKey())
+    #         # print(decoder.unencrypted_packet_header)
     #         # 判断发送者和接收者是不是对的人,以及是不是掩护流量,如果符合条件的话才对这个文件进行处理
     #         if decoder.CheckNameAndCoverTraffic(receiver.GetSenderName(), receiver.GetReceiverName()) is True:
-    #             decoder.GenerateUnencryptedFile(encrypted_file_dir)
-    #             receiver.AddToPacketElementList(decoder.GetUnencryptedFileDir())
+    #             # print(decoder.unencrypted_packet_header)
+    #             print("")
+    #             decoder.GeneratePacketElement()
+    #             print("")
+    #             # print(decoder.GetPacketElement())
+    #             receiver.AddToPacketElementList(decoder.GetPacketElement())
     #     # 判断是不是已经把所有包都接受完全
     #     if receiver.CheckIntegrity() is True:
     #         break
     #     else:
-    #         time.sleep(3000)
+    #         time.sleep(3)
     # receiver.SortPacketElementList()
-    # receiver.GeneratePlainText()
-    # print(decoder.GetPlainText())
+    # plain_text = receiver.GeneratePlainText()
+    # print(plain_text)
