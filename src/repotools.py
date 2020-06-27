@@ -51,7 +51,4 @@ def GetDiffFileDirList(repo):
 
 
 if __name__ == '__main__':
-    repo = SetRepo('./repo', "https://github.com/iLemonRain/testgithubcovertcommunication.git")
-    # print(GetDiffFileDirList(repo))
-    # PullAllFiles(repo)
-    # PushFileList(repo, ["files.py"])
+    # repo = SetRepo('./repo', "https://github.com/iLemonRain/testgithubcovertcommunication.git")

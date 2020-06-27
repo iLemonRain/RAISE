@@ -146,3 +146,4 @@ cython_debug/
 # 工程验证代码文件
 src/获得文件列表.py
 repo
+src/原文.txt

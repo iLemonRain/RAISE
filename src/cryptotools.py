@@ -38,11 +38,10 @@ def RSADecodeData(data, private_key):
 
 # 用公钥加密、再用私钥解密
 if __name__ == '__main__':
-    # crypto = RSAEncodeData("可能的安全风险：广播可能造成广播风暴问题可能出现恶意握手文件名用对那段时间费纳决沙雕番纳斯卡的妇女节阿萨德", 'publickey.pem')
-    GenerateRSAKeyFile(512)
-    public_key = GetPublicKey('./config/publickey.pem')
-    crypto = RSAEncodeData("lemon cherry 1 328 1 100 0 1", public_key)
-    print(crypto)
-    private_key = GetPrivateKey('./config/privatekey.pem')
-    message1 = RSADecodeData(crypto, private_key)
-    print(message1.decode('utf-8'))
+    # GenerateRSAKeyFile(512)
+    # public_key = GetPublicKey('./config/publickey.pem')
+    # crypto = RSAEncodeData("lemon cherry 1 328 1 100 0 1", public_key)
+    # print(crypto)
+    # private_key = GetPrivateKey('./config/privatekey.pem')
+    # message1 = RSADecodeData(crypto, private_key)
+    # print(message1.decode('utf-8'))

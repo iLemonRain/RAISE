@@ -59,7 +59,7 @@ class Peer(object):
     def GetPacketElementList(self):
         return self.packet_element_list
     
-        # 打印出要发送的数据
+    # 打印出要发送的数据
     def GetPlainText(self):
         return self.plain_text
 
@@ -199,10 +199,7 @@ class Receiver(Peer):
     # 将包元素列表进行排序
     def SortPacketElementList(self):
         self.packet_element_list = sorted(self.packet_element_list, key=lambda keys: keys['sn_of_fragment'])
-        plain_data_fragment_list = [packet_element["data"] for packet_element in self.packet_element_list]
-        plain_data = "".join(plain_data_fragment_list)
-        print(plain_data)
 
     # 由各包元素生成明文
     def GeneratePlainText(self):
-        self.plain_data = "".join([packet_element["data"] for packet_element in self.packet_element_list])
+        self.plain_text = "".join([packet_element["data"] for packet_element in self.packet_element_list])
