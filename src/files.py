@@ -153,7 +153,6 @@ class FileDecoder(Packet):
         self.packet_element['more_fragment'] = self.more_fragment
         self.packet_element['data'] = self.data
         self.packet_element['file_dir'] = self.encrypted_file_dir
-        print(self.packet_element)
 
     # 获得各个数据元素
     def GetPacketElement(self):

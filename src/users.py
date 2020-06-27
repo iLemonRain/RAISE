@@ -58,6 +58,10 @@ class Peer(object):
     # 获得所有未加密的数据包元素列表,用来生成一个个数据包
     def GetPacketElementList(self):
         return self.packet_element_list
+    
+        # 打印出要发送的数据
+    def GetPlainText(self):
+        return self.plain_text
 
 
 # 发送方的属性和基本方法
@@ -79,10 +83,6 @@ class Sender(Peer):
     def SetPlainText(self, file):
         with open(file, 'r', encoding='utf-8') as f:
             self.plain_text = f.read()
-
-    # 打印出要发送的数据
-    def GetPlainText(self):
-        return self.plain_text
 
     # 将大段未加密数据分片成几片小段的未加密数据
     def SetFragmentList(self, fragment_data_length, cover_traffic_ratio):
@@ -159,14 +159,14 @@ class Receiver(Peer):
     def ReceiveEncryptedFileList(self, platform):
         # 记录pull操作之前,文件夹里面都有什么文件
         file_dir_dict_before = dict([(f, None) for f in glob.glob(os.path.join(self.repo_dir, '*'))])
-        # # 每次处理的仅仅是最新这次pull下来的文件
-        # if platform == "Github":
-        #     repotools.PullAllFiles(self.repo)
-        #     # 记录pull操作之后,文件夹里面都有什么文件,并进而计算出更改了哪些文件
-        #     file_dir_dict_after = dict([(f, None) for f in glob.glob(os.path.join(self.repo_dir, '*'))])
-        #     self.encrypted_file_dir_list = [f for f in file_dir_dict_after if f not in file_dir_dict_before]
+        # 每次处理的仅仅是最新这次pull下来的文件
+        if platform == "Github":
+            repotools.PullAllFiles(self.repo)
+            # 记录pull操作之后,文件夹里面都有什么文件,并进而计算出更改了哪些文件
+            file_dir_dict_after = dict([(f, None) for f in glob.glob(os.path.join(self.repo_dir, '*'))])
+            self.encrypted_file_dir_list = [f for f in file_dir_dict_after if f not in file_dir_dict_before]
 
-        self.encrypted_file_dir_list = [f for f in file_dir_dict_before]
+        # self.encrypted_file_dir_list = [f for f in file_dir_dict_before]
 
     # 获得所有被加密的文件的地址列表
     def GetEncryptedFileDirList(self):
@@ -199,6 +199,10 @@ class Receiver(Peer):
     # 将包元素列表进行排序
     def SortPacketElementList(self):
         self.packet_element_list = sorted(self.packet_element_list, key=lambda keys: keys['sn_of_fragment'])
-        plain_data_fragment_list = [packet_element["data"] for packet_element in self.packetpacket_element_list]
+        plain_data_fragment_list = [packet_element["data"] for packet_element in self.packet_element_list]
         plain_data = "".join(plain_data_fragment_list)
         print(plain_data)
+
+    # 由各包元素生成明文
+    def GeneratePlainText(self):
+        self.plain_data = "".join([packet_element["data"] for packet_element in self.packet_element_list])
