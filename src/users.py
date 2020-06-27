@@ -30,7 +30,7 @@ class Peer(object):
         # 和传输的文本数据相关
         self.fragment_data_length = -1       # 每个分片中数据的长度
         self.plain_text = ""                 # 未加密的整段文本
-        self.plain_text_fragment_list = []   # 未加密的数据分片的列表(包含数据分片和掩护流量分片)
+        self.unencrypted_fragment_list = []  # 未加密的数据分片的列表(包含数据分片和掩护流量分片)
         # 和传输的数据包的构成有关
         self.packet_element_list = []        # 所有经过发送方或者接收方处理(添加/忽略掩护流量分片)后的包元素列表
 
@@ -66,7 +66,6 @@ class Sender(Peer):
     def __init__(self):
         # 从基类引入基础属性
         super(Sender, self).__init__()
-        self.real_fragment_num = -1
 
     # 设置接收方公钥
     def SetReceiverPublicKey(self, receiver_public_key_file_dir):
@@ -88,46 +87,38 @@ class Sender(Peer):
     # 将大段未加密数据分片成几片小段的未加密数据
     def SetFragmentList(self, fragment_data_length, cover_traffic_ratio):
         # 生成数据流量分片列表,每个数据流量分片长度和fragment_data_length一样
-        self.real_fragment_num = math.ceil(len(self.plain_text) / fragment_data_length)
+        real_fragment_num = math.ceil(len(self.plain_text) / fragment_data_length)
         data_fragment_list = []
         for i in range(0, len(self.plain_text), fragment_data_length):
-            data_fragment_list.append({'data': self.plain_text[i:i + fragment_data_length], 'cover_traffic': 0})
+            sn_of_fragment = int(i / 100)
+            data_fragment_list.append({'data': self.plain_text[i:i + fragment_data_length], 'cover_traffic': 0, 'sn_of_fragment': sn_of_fragment, 'more_fragment': 0 if sn_of_fragment == real_fragment_num - 1 else 1})
         # 生成掩护流量分片列表,每个掩护流量分片长度和fragment_data_length一样
-        cover_traffic_fragment_num = int(self.real_fragment_num * cover_traffic_ratio)
+        cover_traffic_fragment_num = int(real_fragment_num * cover_traffic_ratio)
         cover_traffic_fragment_list = []
         for i in range(0, cover_traffic_fragment_num):
             random_str = ''.join([random.choice(string.printable) for i in range(fragment_data_length)])
-            cover_traffic_fragment_list.append({'data': random_str, 'cover_traffic': 1})
+            cover_traffic_fragment_list.append({'data': random_str, 'cover_traffic': 1, 'sn_of_fragment': -1, 'more_fragment': -1})
         # 添加上掩护流量列表,并进行随机混合
-        self.plain_text_fragment_list = data_fragment_list + cover_traffic_fragment_list
-        random.shuffle(self.plain_text_fragment_list)
+        self.unencrypted_fragment_list = data_fragment_list + cover_traffic_fragment_list
+        random.shuffle(self.unencrypted_fragment_list)
 
     # 返回未加密的数据分片列表
     def GetFragmentList(self):
-        return self.plain_text_fragment_list
+        return self.unencrypted_fragment_list
 
     # 生成一系列要发送包的组成元素(头部和未加密的数据部分)的列表
     def GeneratePacketElementList(self):
-        sn_of_fragment = 0
-        for i in range(0, len(self.plain_text_fragment_list)):
+        for i in range(0, len(self.unencrypted_fragment_list)):
             packet_element = {}
             packet_element['sender_name'] = self.sender_name
             packet_element['receiver_name'] = self.receiver_name
-            packet_element['cover_traffic'] = self.plain_text_fragment_list[i]['cover_traffic']
+            packet_element['cover_traffic'] = self.unencrypted_fragment_list[i]['cover_traffic']
             packet_element['full_data_length'] = len(self.plain_text)
-            packet_element['identification'] = 1
-            packet_element['fragment_data_length'] = len(self.plain_text_fragment_list[i]['data'])
-            if packet_element['cover_traffic'] == 0:
-                packet_element['sn_of_fragment'] = sn_of_fragment
-                sn_of_fragment += 1
-                if self.real_fragment_num == sn_of_fragment:
-                    packet_element['more_fragment'] = 0
-                else:
-                    packet_element['more_fragment'] = 1
-            else:
-                packet_element['sn_of_fragment'] = -1
-                packet_element['more_fragment'] = -1
-            packet_element['data'] = self.plain_text_fragment_list[i]['data']
+            packet_element['identification'] = 1 # 这个机制还没做
+            packet_element['fragment_data_length'] = len(self.unencrypted_fragment_list[i]['data'])
+            packet_element['sn_of_fragment'] = self.unencrypted_fragment_list[i]['sn_of_fragment']
+            packet_element['more_fragment'] = self.unencrypted_fragment_list[i]['more_fragment']
+            packet_element['data'] = self.unencrypted_fragment_list[i]['data']
             packet_element['repo_dir'] = self.repo_dir
             self.packet_element_list.append(packet_element)
 
