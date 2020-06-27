@@ -29,8 +29,8 @@ class Peer(object):
         self.encrypted_file_dir_list = []    # 存放所有已被加密的文件的位置列表
         # 和传输的文本数据相关
         self.fragment_data_length = -1       # 每个分片中数据的长度
-        self.plain_data = ""                 # 未加密的整段文本
-        self.plain_data_fragment_list = []   # 未加密的数据分片的列表(包含数据分片和掩护流量分片)
+        self.plain_text = ""                 # 未加密的整段文本
+        self.plain_text_fragment_list = []   # 未加密的数据分片的列表(包含数据分片和掩护流量分片)
         # 和传输的数据包的构成有关
         self.packet_element_list = []        # 所有经过发送方或者接收方处理(添加/忽略掩护流量分片)后的包元素列表
 
@@ -51,9 +51,9 @@ class Peer(object):
         return self.receiver_name
 
     # 设置本地仓库
-    def SetRepo(self, repo_dir, repo_href):
+    def SetRepo(self, repo_dir, repo_url):
         self.repo_dir = repo_dir
-        self.repo = repotools.SetRepo(repo_dir, repo_href)
+        self.repo = repotools.SetRepo(repo_dir, repo_url)
 
     # 获得所有未加密的数据包元素列表,用来生成一个个数据包
     def GetPacketElementList(self):
@@ -66,6 +66,7 @@ class Sender(Peer):
     def __init__(self):
         # 从基类引入基础属性
         super(Sender, self).__init__()
+        self.real_fragment_num = -1
 
     # 设置接收方公钥
     def SetReceiverPublicKey(self, receiver_public_key_file_dir):
@@ -78,51 +79,55 @@ class Sender(Peer):
     # 将文件转为未加密的数据
     def SetPlainText(self, file):
         with open(file, 'r', encoding='utf-8') as f:
-            self.plain_data = f.read()
+            self.plain_text = f.read()
 
     # 打印出要发送的数据
     def GetPlainText(self):
-        return self.plain_data
+        return self.plain_text
 
     # 将大段未加密数据分片成几片小段的未加密数据
     def SetFragmentList(self, fragment_data_length, cover_traffic_ratio):
         # 生成数据流量分片列表,每个数据流量分片长度和fragment_data_length一样
-        data_fragment_num = math.ceil(len(self.plain_data) / fragment_data_length)
+        self.real_fragment_num = math.ceil(len(self.plain_text) / fragment_data_length)
         data_fragment_list = []
-        for i in range(0, len(self.plain_data), fragment_data_length):
-            data_fragment_list.append({'data': self.plain_data[i:i + fragment_data_length], 'cover_traffic': 0})
+        for i in range(0, len(self.plain_text), fragment_data_length):
+            data_fragment_list.append({'data': self.plain_text[i:i + fragment_data_length], 'cover_traffic': 0})
         # 生成掩护流量分片列表,每个掩护流量分片长度和fragment_data_length一样
-        cover_traffic_fragment_num = int(data_fragment_num * cover_traffic_ratio)
+        cover_traffic_fragment_num = int(self.real_fragment_num * cover_traffic_ratio)
         cover_traffic_fragment_list = []
         for i in range(0, cover_traffic_fragment_num):
             random_str = ''.join([random.choice(string.printable) for i in range(fragment_data_length)])
             cover_traffic_fragment_list.append({'data': random_str, 'cover_traffic': 1})
         # 添加上掩护流量列表,并进行随机混合
-        self.plain_data_fragment_list = data_fragment_list + cover_traffic_fragment_list
-        random.shuffle(self.plain_data_fragment_list)
+        self.plain_text_fragment_list = data_fragment_list + cover_traffic_fragment_list
+        random.shuffle(self.plain_text_fragment_list)
 
     # 返回未加密的数据分片列表
     def GetFragmentList(self):
-        return self.plain_data_fragment_list
+        return self.plain_text_fragment_list
 
     # 生成一系列要发送包的组成元素(头部和未加密的数据部分)的列表
     def GeneratePacketElementList(self):
         sn_of_fragment = 0
-        for i in range(0, len(self.plain_data_fragment_list)):
+        for i in range(0, len(self.plain_text_fragment_list)):
             packet_element = {}
             packet_element['sender_name'] = self.sender_name
             packet_element['receiver_name'] = self.receiver_name
-            packet_element['cover_traffic'] = self.plain_data_fragment_list[i]['cover_traffic']
-            packet_element['full_data_length'] = len(self.plain_data)
+            packet_element['cover_traffic'] = self.plain_text_fragment_list[i]['cover_traffic']
+            packet_element['full_data_length'] = len(self.plain_text)
             packet_element['identification'] = 1
-            packet_element['fragment_data_length'] = len(self.plain_data_fragment_list[i]['data'])
+            packet_element['fragment_data_length'] = len(self.plain_text_fragment_list[i]['data'])
             if packet_element['cover_traffic'] == 0:
                 packet_element['sn_of_fragment'] = sn_of_fragment
                 sn_of_fragment += 1
+                if self.real_fragment_num == sn_of_fragment:
+                    packet_element['more_fragment'] = 0
+                else:
+                    packet_element['more_fragment'] = 1
             else:
                 packet_element['sn_of_fragment'] = -1
-            packet_element['more_fragment'] = 0 if i == len(self.plain_data_fragment_list) - 1 else 1
-            packet_element['data'] = self.plain_data_fragment_list[i]['data']
+                packet_element['more_fragment'] = -1
+            packet_element['data'] = self.plain_text_fragment_list[i]['data']
             packet_element['repo_dir'] = self.repo_dir
             self.packet_element_list.append(packet_element)
 
@@ -138,6 +143,7 @@ class Sender(Peer):
             for encrypted_file_dir in self.encrypted_file_dir_list:
                 encrypted_file_name = ''.join(os.path.splitext(os.path.split(encrypted_file_dir)[1])) # 为了方便push,只提取文件名
                 encrypted_file_name_list.append(encrypted_file_name)
+            repotools.PullAllFiles(self.repo)
             repotools.PushFileList(self.repo, encrypted_file_name_list)
 
 
@@ -181,10 +187,18 @@ class Receiver(Peer):
 
     # 检查当前有没有接收完所有的包
     def CheckIntegrity(self):
-        sn_list = [packet_element['sn_of_fragment'] for packet_element in self.packet_element_list]
-        max_sn = max(sn_list)
+        # 校验这一系列包是不是总长度信息一致
+        for i in range(len(self.packet_element_list)-1):
+            if self.packet_element_list[i]["full_data_length"] != self.packet_element_list[i]["full_data_length"]:
+                return False
+        # 检查是不是所有片段的长度加起来等于总长度
+        sn_of_fragment_sum = sum([packet_element["fragment_data_length"] for packet_element in self.packet_element_list])
+        if sn_of_fragment_sum != self.packet_element_list[0]["full_data_length"]:
+            return False
         # 判断是否已经收到了max_sn之前的所有包,如果是的话检查max_sn对应的包是不是最后一个包
-        if set(packet_element["sn_of_fragment"] for packet_element in self.packet_element_list) == set([i for i in range(0, max_sn + 1)]):
+        sn_of_fragment_list = [packet_element["sn_of_fragment"] for packet_element in self.packet_element_list]
+        max_sn = max(sn_of_fragment_list)
+        if set(sn_of_fragment_list) == set([i for i in range(0, max_sn + 1)]):
             for packet_element in self.packet_element_list:
                 if packet_element['sn_of_fragment'] == max_sn:
                     if packet_element['more_fragment'] == 0:

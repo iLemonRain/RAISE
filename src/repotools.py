@@ -5,16 +5,20 @@ import time
 import shutil
 
 # 根据文件夹的路径获取仓库
-def SetRepo(dir, href):
+def SetRepo(repo_dir, repo_url):
     try:
-        return Repo(dir)
+        repo = Repo(repo_dir)
     except NoSuchPathError:
-        print("没有这个目录,正在克隆一个...")
-        return Repo.clone_from(href, dir)
+        print("没有这个目录,正在新建目录并且初始化新仓库...")
+        repo = Repo.init(path=repo_dir)
+        repo.create_remote(name='origin', url=repo_url)
     except InvalidGitRepositoryError:
         print("这个目录里面没有git信息,正在删除目录并克隆一个...")
-        shutil.rmtree(dir) # 递归删除文件夹
-        return Repo.clone_from(href, dir)
+        shutil.rmtree(repo_dir) # 递归删除文件夹
+        repo = Repo.init(path=repo_dir)
+        repo.create_remote(name='origin', url=repo_url)
+    finally:
+        return repo
 
 
 # 推送仓库中的所有文件
@@ -23,7 +27,7 @@ def PushFileList(repo, encrypted_file_dir_list):
         repo.index.add(encrypted_file_dir_list)
         commit_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
         repo.index.commit(commit_str)
-        repo.remote().push()
+        repo.remote().push("master")
     except Exception as e:
         print(e)
 
@@ -31,7 +35,7 @@ def PushFileList(repo, encrypted_file_dir_list):
 # 拉去仓库中的所有文件
 def PullAllFiles(repo):
     try:
-        repo.remote().pull()
+        repo.remote().pull("master")
     except Exception as e:
         print(e)
 
@@ -49,5 +53,5 @@ def GetDiffFileDirList(repo):
 if __name__ == '__main__':
     repo = SetRepo('./repo', "https://github.com/iLemonRain/testgithubcovertcommunication.git")
     # print(GetDiffFileDirList(repo))
-    file_list = ['F2bSfGXMzzGnrpfq7xJp6NGLcH5tf7kZJarw6bPXxYQm5PnnVofx9PqHPpREJW1dtZ4yFZcAgA6OLQp$wpFMUQ==', 'fVsfdZ1z6A3jIsoyOCw6qVmowkUrl60viyxj1P6oHwK018YiAGw$sR87GTdNbNTCvut5PBT2491TU94L$KmEPA==', 'TXfaE0SHZq6NvA62TRy+QoQQoYBbhh7P7vew+oLehtDyyOst8tBciXWj$pXO64yj26fv6cnVnercwK2bEXJo7Q==', 'fKWXBVDHjCHvF6LQi73r3Rx$bgS3FlwQGqTLpqLqCg7kcKmeFE9UfgiEhR4zerqcehKc3U0G+gPG0ACN$u4DMw==', 'N$IW$hBoFHTfx5tm4MoDK11lsPEUljqbpePOJM3K8j7QR5XQ+iEs5ymx9vhnq6OcsdVfJmIsqRn5rdma$GZ9DA==', 'ppcrG6ihE+qSMnY4lIKMvJklryYiHPONrRIj56hMc2YiqQDe1vFjmw7RDKpZWlF+fIKSzxj0k+9mAZwEFOjQ7g==', 'IR4kYGQy89oyy0Ld5DWbNyE4mDebNh9wYV8amjuVNmvAKviwkddrO1vw+0sAusc9faf6IY$JYrlsc5wrvBP96w==', 'a6JTVDX2ZfZ92O02zwf8UzHjakwv3MboUsUw69JF1E9UAhG+DcGni9rbOCqGpG2D550ojdEBtOkPFje4R1L1yg==']
-    PushFileList(repo, file_list)
+    # PullAllFiles(repo)
+    # PushFileList(repo, ["files.py"])
