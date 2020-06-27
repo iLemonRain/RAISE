@@ -107,6 +107,7 @@ class Sender(Peer):
 
     # 生成一系列要发送包的组成元素(头部和未加密的数据部分)的列表
     def GeneratePacketElementList(self):
+        sn_of_fragment = 0
         for i in range(0, len(self.plain_data_fragment_list)):
             packet_element = {}
             packet_element['sender_name'] = self.sender_name
@@ -115,7 +116,11 @@ class Sender(Peer):
             packet_element['full_data_length'] = len(self.plain_data)
             packet_element['identification'] = 1
             packet_element['fragment_data_length'] = len(self.plain_data_fragment_list[i]['data'])
-            packet_element['sn_of_fragment'] = i
+            if packet_element['cover_traffic'] == 0:
+                packet_element['sn_of_fragment'] = sn_of_fragment
+                sn_of_fragment += 1
+            else:
+                packet_element['sn_of_fragment'] = -1
             packet_element['more_fragment'] = 0 if i == len(self.plain_data_fragment_list) - 1 else 1
             packet_element['data'] = self.plain_data_fragment_list[i]['data']
             packet_element['repo_dir'] = self.repo_dir
@@ -179,7 +184,7 @@ class Receiver(Peer):
         sn_list = [packet_element['sn_of_fragment'] for packet_element in self.packet_element_list]
         max_sn = max(sn_list)
         # 判断是否已经收到了max_sn之前的所有包,如果是的话检查max_sn对应的包是不是最后一个包
-        if set(sn_list) == set([i for i in range(1, max_sn + 1)]):
+        if set(packet_element["sn_of_fragment"] for packet_element in self.packet_element_list) == set([i for i in range(0, max_sn + 1)]):
             for packet_element in self.packet_element_list:
                 if packet_element['sn_of_fragment'] == max_sn:
                     if packet_element['more_fragment'] == 0:

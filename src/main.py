@@ -52,9 +52,7 @@ if __name__ == '__main__':
     #         # 判断发送者和接收者是不是对的人,以及是不是掩护流量,如果符合条件的话才对这个文件进行处理
     #         if decoder.CheckNameAndCoverTraffic(receiver.GetSenderName(), receiver.GetReceiverName()) is True:
     #             # print(decoder.unencrypted_packet_header)
-    #             print("")
     #             decoder.GeneratePacketElement()
-    #             print("")
     #             # print(decoder.GetPacketElement())
     #             receiver.AddToPacketElementList(decoder.GetPacketElement())
     #     # 判断是不是已经把所有包都接受完全
