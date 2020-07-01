@@ -31,6 +31,7 @@ if __name__ == '__main__':
         sender.AddToEncryptedFileDirList(encoder.GetEncryptedFileDir())
     # 发送所有被加密的文件到仓库
     sender.SendEncryptedFileList(platform="Github")
+    del sender
 
     # 建立一个接收方对象,之后可以定期从仓库拉取不同发送者的内容
     receiver = Receiver()
@@ -59,3 +60,4 @@ if __name__ == '__main__':
     receiver.SortPacketElementList()
     receiver.GeneratePlainText()
     print(receiver.GetPlainText())
+    del receiver

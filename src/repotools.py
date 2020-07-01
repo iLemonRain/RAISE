@@ -50,5 +50,5 @@ def GetDiffFileDirList(repo):
     return diff_file_dir_list
 
 
-if __name__ == '__main__':
-    # repo = SetRepo('./repo', "https://github.com/iLemonRain/testgithubcovertcommunication.git")
+# if __name__ == '__main__':
+#     repo = SetRepo('./repo', "https://github.com/iLemonRain/testgithubcovertcommunication.git")

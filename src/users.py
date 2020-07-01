@@ -73,7 +73,7 @@ class Sender(Peer):
 
     # 设置接收方公钥
     def SetReceiverPublicKey(self, receiver_public_key_file_dir):
-        self.receiver_public_key = cryptotools.GetPublicKey(receiver_public_key_file_dir)
+        self.receiver_public_key = cryptotools.GetRSAPublicKey(receiver_public_key_file_dir)
 
     # 获得接收方公钥
     def GetReceiverPublicKey(self):
@@ -149,7 +149,7 @@ class Receiver(Peer):
 
     # 设置接收方私钥
     def SetReceiverPrivateKey(self, receiver_private_key_file_dir):
-        self.receiver_private_key = cryptotools.GetPrivateKey(receiver_private_key_file_dir)
+        self.receiver_private_key = cryptotools.GetRSAPrivateKey(receiver_private_key_file_dir)
 
     # 获得接收方私钥
     def GetReceiverPrivateKey(self):
