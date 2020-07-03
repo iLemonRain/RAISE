@@ -45,23 +45,23 @@ def RSADecodeData(data, private_key):
 
 
 # 根据椭圆曲线类型,初始化ECDH
-def ECDHInit(curve):
-    ecdh = ECDH(curve)
+@functiontimer.fn_timer
+def ECDHInit():
+    ecdh = ECDH(NIST256p)
     ecdh.generate_private_key()
     return ecdh
 
 
-# 生成ECDH所用的临时公钥,并根据文件位置保存为pem文件
-def GenerateECDHPublicKey(ecdh, key_dir):
-    local_public_key = ecdh.get_public_key()
-    with open(key_dir, "wb") as f:
-        f.write(local_public_key.to_pem())
+# 生成ECDH所用的临时公钥(pem格式)
+@functiontimer.fn_timer
+def GenerateECDHPublicKey(ecdh):
+    local_public_key = ecdh.get_public_key().to_pem()
+    return local_public_key
 
 
 # 根据自己的私钥和对方传来的公钥生成本次加密传输所需的对称秘钥:
-def GenerateECDHSharedKey(ecdh, remote_public_key_dir):
-    with open(remote_public_key_dir) as f:
-        remote_public_key = f.read()
+@functiontimer.fn_timer
+def GenerateECDHSharedKey(ecdh, remote_public_key):
     ecdh.load_received_public_key_pem(remote_public_key)
     shared_key = ecdh.generate_sharedsecret_bytes()
     return shared_key
@@ -125,12 +125,12 @@ if __name__ == '__main__':
     # print(message1.decode('utf-8'))
 
     # # 模拟ECDH
-    ecdh_1 = ECDHInit(NIST256p)
-    GenerateECDHPublicKey(ecdh_1, "local_public_key.pem")
-    ecdh_2 = ECDHInit(NIST256p)
-    GenerateECDHPublicKey(ecdh_2, "remote_public_key.pem")
-    shared_key_1 = GenerateECDHSharedKey(ecdh_1, "remote_public_key.pem")
-    shared_key_2 = GenerateECDHSharedKey(ecdh_2, "local_public_key.pem")
+    ecdh_1 = ECDHInit()
+    local_ecdh_public_key = GenerateECDHPublicKey(ecdh_1)
+    ecdh_2 = ECDHInit()
+    remote_ecdh_public_key = GenerateECDHPublicKey(ecdh_2)
+    shared_key_1 = GenerateECDHSharedKey(ecdh_1, remote_ecdh_public_key)
+    shared_key_2 = GenerateECDHSharedKey(ecdh_2, local_ecdh_public_key)
     nonce = GenerateAEADNonce()
     if shared_key_1 == shared_key_2:
         print("两边生成了相同的ECDH秘钥:", shared_key_1)

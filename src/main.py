@@ -1,5 +1,5 @@
 # coding:utf-8
-from files import FileEncoder, FileDecoder
+from files import DataFileEncoder, DataFileDecoder
 from users import Sender, Receiver
 import os
 import time
@@ -15,20 +15,26 @@ if __name__ == '__main__':
     sender.SetSenderName("lemon")
     sender.SetReceiverName("cherry")
     # 设定仓库信息
-    sender.SetRepo('./repo_s', "https://github.com/iLemonRain/testgithubcovertcommunication.git")
+    sender.SetRepo('./repo_send', "https://gitee.com/iLemonRain/raise_data.git")
     # 设定接收方公钥
     sender.SetReceiverPublicKey("./config/publickey.pem")
+    # 开始握手
+    # sender.InitECDH()
+    # sender.GenerateLocalECDHPublicKey("local_public_key.pem")
+    # sender.GenerateShakeHandPacket()
+    # shake_hand = 
+    # sender.StartShakeHand()
     # 在当前的测试中,暂不涉及传输文件,只传输一段文字
-    sender.SetPlainText("./src/原文.txt")
+    sender.SetPlainBytes("著作权.zip")
     # 设定单个数据分片的长度为100个字符,并进行分片,掩护流量比率为1:1
-    sender.SetFragmentList(100, 1)
+    sender.SetFragmentList(1000*1000, 1)
     # 设定一系列要发送包的组成元素(头部和未加密的数据部分)的列表
     sender.GeneratePacketElementList()
     # 将每个分片的组成元素加入文件里面,并发送
     for packet_element in sender.GetPacketElementList():
-        encoder = FileEncoder(packet_element, sender.GetReceiverPublicKey())
-        encoder.GenerateEncryptedFile()
-        sender.AddToEncryptedFileDirList(encoder.GetEncryptedFileDir())
+        data_file_encoder = DataFileEncoder(packet_element, sender.GetReceiverPublicKey())
+        data_file_encoder.GenerateEncryptedFile()
+        sender.AddToEncryptedFileDirList(data_file_encoder.GetEncryptedFileDir())
     # 发送所有被加密的文件到仓库
     sender.SendEncryptedFileList(platform="Github")
     del sender
@@ -39,7 +45,7 @@ if __name__ == '__main__':
     receiver.SetSenderName("lemon")
     receiver.SetReceiverName("cherry")
     # 设定仓库信息
-    receiver.SetRepo("./repo_r", "https://github.com/iLemonRain/testgithubcovertcommunication.git")
+    receiver.SetRepo("./repo_receive", "https://gitee.com/iLemonRain/raise_data.git")
     # 设定接收方私钥
     receiver.SetReceiverPrivateKey("./config/privatekey.pem")
     while True:
@@ -47,17 +53,18 @@ if __name__ == '__main__':
         receiver.ReceiveEncryptedFileList(platform="Github")
         # 从接收到的被加密文件列表中找到本接受者对象想要的内容(发送方和接收方都要求对的上设定)
         for encrypted_file_dir in receiver.GetEncryptedFileDirList():
-            decoder = FileDecoder(encrypted_file_dir, receiver.GetReceiverPrivateKey())
+            data_file_decoder = DataFileDecoder(encrypted_file_dir, receiver.GetReceiverPrivateKey())
             # 判断发送者和接收者是不是对的人,以及是不是掩护流量,如果符合条件的话才对这个文件进行处理
-            if decoder.CheckNameAndCoverTraffic(receiver.GetSenderName(), receiver.GetReceiverName()) is True:
-                decoder.GeneratePacketElement()
-                receiver.AddToPacketElementList(decoder.GetPacketElement())
+            if data_file_decoder.CheckNameAndCoverTraffic(receiver.GetSenderName(), receiver.GetReceiverName()) is True:
+                data_file_decoder.GeneratePacketElement()
+                receiver.AddToPacketElementList(data_file_decoder.GetPacketElement())
         # 判断是不是已经把所有包都接受完全
         if receiver.CheckIntegrity() is True:
             break
         else:
             time.sleep(3)
     receiver.SortPacketElementList()
-    receiver.GeneratePlainText()
-    print(receiver.GetPlainText())
-    del receiver
+    receiver.GeneratePlainBytes()
+    # print(receiver.GetPlainBytes())
+    with open('著作权还原.zip', 'wb+')as f:
+        f.write(receiver.GetPlainBytes())

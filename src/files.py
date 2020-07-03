@@ -2,41 +2,80 @@
 import os
 import cryptotools
 
-# 数据包的属性和基本方法
-class Packet(object):
+
+# 握手文件的的属性和基本方法
+class ShakeHandFile(object):
+    # 构造函数
+    def __init__(self):
+        # 包的通用组成元素
+        self.sender_name = ""               # 发送方的名字或代号
+        self.receiver_name = ""             # 接收方的名字或代号
+        self.type_of_use = -1               # 本报文用途.0为传输数据,1为发起握手,2为回应握手,3为发起挥手,4为响应挥手
+        self.full_data_length = -1          # 本报文中的data在组合完全后的长度
+        # 作为握手包的已被加密的文件的路径
+        self.encrypted_file_dir = ""        # 已被加密文件的路径
+
+
+# 发送方对握手文件进行的处理,目的是生成握手文件
+class ShakeHandFileEncoder(ShakeHandFile):
+    # 构造函数
+    def __init__(self, packet_element):
+        self.packet_element = packet_element
+        self.sender_name = self.packet_element['sender_name']
+        self.receiver_name = self.packet_element['receiver_name']
+        self.type_of_use = self.packet_element['type_of_use']
+        self.full_data_length = self.packet_element['full_data_length']
+
+    # 生成握手用的pem文件
+    def GenerateShakeHandFile(self):
+        pass
+
+
+# 接收方对握手文件进行的处理,目的是ECDH出对称密钥
+class ShakeHandFileDecoder(ShakeHandFile):
+    # 构造函数
+    def __init__(self):
+        pass
+
+    # 解读
+    def DecodeShakeHandFile(self):
+        pass
+
+
+# 数据文件的的属性和基本方法
+class DataFile(object):
     # 构造函数
     def __init__(self):
         # 包元素的整体
-        self.packet_element = {}             # 含有所有的包元素
-        # 包的组成元素
-        self.sender_name = ""                # 发送方的名字或代号
-        self.receiver_name = ""              # 接收方的名字或代号
-        self.cover_traffic = -1              # 不是掩护流量为0,是掩护流量为1.掩护流量将不会被分析
-        # self.type_of_use = -1              # 本报文用途.0为传输数据,1为发起握手,2为回应握手
-        self.full_data_length = -1           # 本报文中的data在组合完全后的长度
-        self.identification = -1             # 标识.完整的报文的所有切片都具有统一的标识
-        self.fragment_data_length = -1       # 本切片的数据部分长度
-        self.sn_of_fragment = -1             # 本切片的编号
-        self.more_fragment = -1              # MF,是否还有分片位,1表示后面还有分片,0表示已经是最后分片
-        self.data = ""                       # 数据部分(未加密)
+        self.packet_element = {}            # 含有所有的包元素
+        # 包的通用组成元素
+        self.sender_name = ""               # 发送方的名字或代号
+        self.receiver_name = ""             # 接收方的名字或代号
+        self.cover_traffic = -1             # 不是掩护流量为0,是掩护流量为1.掩护流量将不会被分析
+        self.type_of_use = -1               # 本报文用途.0为传输数据,1为发起握手,2为回应握手,3为发起挥手,4为响应挥手
+        self.full_data_length = -1          # 本报文中的data在组合完全后的长度
+        self.identification = -1            # 标识.完整的报文的所有切片都具有统一的标识
+        self.fragment_data_length = -1      # 本切片的数据部分长度
+        self.sn_of_fragment = -1            # 本切片的编号
+        self.more_fragment = -1             # MF,是否还有分片位,1表示后面还有分片,0表示已经是最后分片
+        self.data = ""                      # 数据部分(未加密)
+        # 数据传输包的特有部分
+        self.nonce = ""                     # 12字节随机数,用于数据传输时的消息验证
         # 秘钥
-        self.sender_public_key = ""          # 发送方的公钥
-        self.sender_private_key = ""         # 发送方的私钥
-        self.receiver_public_key = ""        # 接收方的公钥
-        self.receiver_private_key = ""       # 接收方的私钥
-        self.symmetric_key = ""              # 用于加密数据的对称秘钥
+        self.sender_public_key = ""         # 发送方的公钥
+        self.sender_private_key = ""        # 发送方的私钥
+        self.receiver_public_key = ""       # 接收方的公钥
+        self.receiver_private_key = ""      # 接收方的私钥
+        self.symmetric_key = ""             # 用于加密数据的对称秘钥
         # 仓库地址
-        self.repo_dir = ""                   # 交流用的仓库的地址
+        self.repo_dir = ""                  # 交流用的仓库的地址
         # 未加密和加密过的包文本
-        self.unencrypted_packet_header = ""  # 未加密的包头部
-        self.encrypted_packet_header = ""    # 已加密的包头部
-        self.unencrypted_packet_data = ""    # 未加密的包数据部分
-        self.encrypted_packet_data = ""      # 已加密的包数据部分
-        # 作为信息载体的未加密的文件和已被加密的文件的路径
-        self.unencrypted_file = ""           # 未被加密的文件
-        self.unencrypted_file_dir = ""       # 未被加密文件的路径
-        self.encrypted_file = ""             # 已被加密的文件
-        self.encrypted_file_dir = ""         # 已被加密文件的路径
+        self.unencrypted_packet_header = "" # 未加密的包头部
+        self.encrypted_packet_header = ""   # 已加密的包头部
+        self.unencrypted_packet_data = ""   # 未加密的包数据部分
+        self.encrypted_packet_data = ""     # 已加密的包数据部分
+        # 作为信息载体的已被加密的文件的路径
+        self.encrypted_file_dir = ""        # 已被加密文件的路径
 
     # 打印整个数据包
     def PrintPacketInfo(self, print_all=True):
@@ -51,11 +90,11 @@ class Packet(object):
 
 
 # 对"单个"数据分片加上头部后加密,使之变成一个数据包,随后隐写入文件
-class FileEncoder(Packet):
+class DataFileEncoder(DataFile):
     # 构造函数
     def __init__(self, packet_element, receiver_public_key):
         # 从基类引入基础属性
-        super(FileEncoder, self).__init__()
+        super(DataFileEncoder, self).__init__()
         # 秘钥
         self.receiver_public_key = receiver_public_key
         # 获得包元素整体
@@ -73,8 +112,7 @@ class FileEncoder(Packet):
         # 仓库地址
         self.repo_dir = self.packet_element['repo_dir']
         # 获得加密的头部和数据
-        self.unencrypted_packet_header = " ".join([str(i) for i in list(packet_element.values())[0:-2]]) # 将头部元素压缩成字符串
-        # self.unencrypted_packet_header = " ".join([str(i) for i in list(self.__dict__.values())[0:8]]) # 将头部元素压缩成字符串
+        self.unencrypted_packet_header = " ".join([str(i) for i in list(packet_element.values())[0:-2]])  # 将头部元素压缩成字符串
         self.unencrypted_packet_data = self.data
 
     # 获取未加密的头部(文件名)字符串
@@ -96,9 +134,9 @@ class FileEncoder(Packet):
     # 加密文件,并设定加密的文件的目录.注意这里的目录是相对于仓库的目录
     def GenerateEncryptedFile(self):
         self.encrypted_packet_header = cryptotools.RSAEncodeData(self.unencrypted_packet_header, self.receiver_public_key)
-        self.encrypted_packet_data = self.unencrypted_packet_data # 这里应该使用秘钥加密一下,现在还没有写
+        self.encrypted_packet_data = self.unencrypted_packet_data  # 这里应该使用秘钥加密一下,现在还没有写
         self.encrypted_file_dir = self.repo_dir + "/" + self.encrypted_packet_header
-        with open(self.encrypted_file_dir, 'w+') as f:
+        with open(self.encrypted_file_dir, 'wb') as f:
             f.write(self.encrypted_packet_data)
 
     # 获取加密的文件的目录
@@ -107,16 +145,16 @@ class FileEncoder(Packet):
 
 
 # 对"单个"数据包的解隐写和解密处理
-class FileDecoder(Packet):
+class DataFileDecoder(DataFile):
     # 构造函数
     def __init__(self, encrypted_file_dir, receiver_private_key):
         # 从基类引入基础属性
-        super(FileDecoder, self).__init__()
+        super(DataFileDecoder, self).__init__()
         # 秘钥和文件地址
         self.receiver_private_key = receiver_private_key
         self.encrypted_file_dir = encrypted_file_dir
         # 解析未加密的文件名和文件数据
-        self.encrypted_packet_header = os.path.splitext(os.path.split(encrypted_file_dir)[1])[0] # 从文件路径当中提取出不带后缀的文件名
+        self.encrypted_packet_header = os.path.splitext(os.path.split(encrypted_file_dir)[1])[0]  # 从文件路径当中提取出不带后缀的文件名
         self.unencrypted_packet_header = cryptotools.RSADecodeData(self.encrypted_packet_header, receiver_private_key).decode('utf-8')
         # 解析出包中应该包含的元素,用来之后打包和判断是不是合法
         unencrypted_packet_header_list = self.unencrypted_packet_header.split(" ")
@@ -138,9 +176,9 @@ class FileDecoder(Packet):
 
     # 生成包含各个元素的数据包
     def GeneratePacketElement(self):
-        with open(self.encrypted_file_dir, 'r+') as f:
+        with open(self.encrypted_file_dir, 'rb') as f:
             self.encrypted_packet_data = f.read()
-        self.unencrypted_packet_data = self.encrypted_packet_data # 目前还没有写数据的加密部分,以后补上
+        self.unencrypted_packet_data = self.encrypted_packet_data  # 目前还没有写数据的加密部分,以后补上
         self.data = self.unencrypted_packet_data
         # 打包
         self.packet_element['sender_name'] = self.sender_name
