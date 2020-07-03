@@ -1,4 +1,5 @@
 # 对单个文件的操作
+import functiontimer
 import os
 import cryptotools
 

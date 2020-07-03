@@ -4,7 +4,6 @@ import functiontimer
 import os
 import glob
 import random
-import string
 import math
 import cryptotools
 import repotools
@@ -101,6 +100,7 @@ class Sender(Peer):
         pass
 
     # 将文件转为未加密的数据
+    @functiontimer.fn_timer
     def SetPlainBytes(self, file):
         with open(file, 'rb') as f:
             self.plain_bytes = f.read()
@@ -135,6 +135,7 @@ class Sender(Peer):
         return self.unencrypted_fragment_list
 
     # 生成一系列要发送包的组成元素(头部和未加密的数据部分)的列表
+    @functiontimer.fn_timer
     def GeneratePacketElementList(self):
         for i in range(0, len(self.unencrypted_fragment_list)):
             packet_element = {}
@@ -155,6 +156,7 @@ class Sender(Peer):
         self.encrypted_file_dir_list.append(encrypted_file_dir)
 
     # 将所有的被加密文件传送到仓库
+    @functiontimer.fn_timer
     def SendEncryptedFileList(self, platform):
         # 平台采用Github的话,要push的文件路径需要是相对于git仓库的路径
         if platform == "Github":
@@ -184,6 +186,7 @@ class Receiver(Peer):
         return self.receiver_private_key
 
     # 从仓库接收所有被加密的文件
+    @functiontimer.fn_timer
     def ReceiveEncryptedFileList(self, platform):
         # 记录pull操作之前,文件夹里面都有什么文件
         file_dir_dict_before = dict([(f, None) for f in glob.glob(os.path.join(self.repo_dir, '*'))])
@@ -225,6 +228,7 @@ class Receiver(Peer):
         return False
 
     # 将包元素列表进行排序
+    @functiontimer.fn_timer
     def SortPacketElementList(self):
         self.packet_element_list = sorted(self.packet_element_list, key=lambda keys: keys['sn_of_fragment'])
 

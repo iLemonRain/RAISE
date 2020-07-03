@@ -24,9 +24,9 @@ if __name__ == '__main__':
     # sender.GenerateShakeHandPacket()
     # shake_hand = 
     # sender.StartShakeHand()
-    # 在当前的测试中,暂不涉及传输文件,只传输一段文字
+    # 要传输的文件
     sender.SetPlainBytes("著作权.zip")
-    # 设定单个数据分片的长度为100个字符,并进行分片,掩护流量比率为1:1
+    # 设定单个数据分片的长度,并进行分片,并设定真实分片和掩护流量分片的比例
     sender.SetFragmentList(1000*1000, 1)
     # 设定一系列要发送包的组成元素(头部和未加密的数据部分)的列表
     sender.GeneratePacketElementList()
@@ -65,6 +65,6 @@ if __name__ == '__main__':
             time.sleep(3)
     receiver.SortPacketElementList()
     receiver.GeneratePlainBytes()
-    # print(receiver.GetPlainBytes())
+    # 还原出文件来
     with open('著作权还原.zip', 'wb+')as f:
         f.write(receiver.GetPlainBytes())
