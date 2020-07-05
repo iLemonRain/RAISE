@@ -1,6 +1,7 @@
 # 和加解密相关的操作
 import functiontimer
-import os
+import random
+import string
 import rsa
 import base64
 from ecdsa import ECDH, NIST256p
@@ -69,7 +70,9 @@ def GenerateECDHSharedKey(ecdh, remote_public_key):
 
 # 生成一个AEAD(关联数据的认证加密)加解密用到的的12字节随机数
 def GenerateAEADNonce():
-    nonce = os.urandom(12)
+    # 生成12位字符串
+    str_12 = ''.join(random.sample(string.ascii_letters + string.digits, 12))
+    nonce = bytes(str_12, encoding="ascii")
     return nonce
 
 
@@ -115,14 +118,14 @@ def AES256GCMDecrypt(aesgcm, nonce, encrypted_data):
 
 # 用公钥加密、再用私钥解密
 if __name__ == '__main__':
-    # # 模拟RSA
-    # GenerateRSAKeyFile(512)
-    # public_key = GetRSAPublicKey('./config/publickey.pem')
-    # crypto = RSAEncodeData("lemon cherry 1 328 1 100 0 1", public_key)
-    # print(crypto)
-    # private_key = GetRSAPrivateKey('./config/privatekey.pem')
-    # message1 = RSADecodeData(crypto, private_key)
-    # print(message1.decode('utf-8'))
+    # 模拟RSA
+    GenerateRSAKeyFile(1024)
+    public_key = GetRSAPublicKey('./config/publickey.pem')
+    crypto = RSAEncodeData("lemon cherry 1 328 1 100 0 1", public_key)
+    print(crypto)
+    private_key = GetRSAPrivateKey('./config/privatekey.pem')
+    message1 = RSADecodeData(crypto, private_key)
+    print(message1.decode('utf-8'))
 
     # # 模拟ECDH
     ecdh_1 = ECDHInit()

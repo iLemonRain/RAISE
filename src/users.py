@@ -35,6 +35,8 @@ class Peer(object):
         self.unencrypted_fragment_list = []  # 未加密的数据分片的列表(包含数据分片和掩护流量分片)
         # 和传输的数据包的构成有关
         self.packet_element_list = []        # 所有经过发送方或者接收方处理(添加/忽略掩护流量分片)后的包元素列表
+        # ECDH出的对称秘钥
+        self.shared_key = b'e\x7fx\xb2A\x04\x89Z\x06K\xf7I[fZ\xf39\xa3t\x9d\xa9Hk\xd1-6\xef\xef\xf1\xf8\xf71'
 
     # 设置发送方的姓名或代号
     def SetSenderName(self, sender_name):
@@ -64,6 +66,10 @@ class Peer(object):
     # 获得要发送的原始数据
     def GetPlainBytes(self):
         return self.plain_bytes
+
+    # 获得对称秘钥
+    def GetSharedKey(self):
+        return self.shared_key
 
 
 # 发送方的属性和基本方法
@@ -147,8 +153,10 @@ class Sender(Peer):
             packet_element['fragment_data_length'] = len(self.unencrypted_fragment_list[i]['data'])
             packet_element['sn_of_fragment'] = self.unencrypted_fragment_list[i]['sn_of_fragment']
             packet_element['more_fragment'] = self.unencrypted_fragment_list[i]['more_fragment']
+            packet_element['nonce'] = str(cryptotools.GenerateAEADNonce(), encoding="ascii")
             packet_element['data'] = self.unencrypted_fragment_list[i]['data']
             packet_element['repo_dir'] = self.repo_dir
+            packet_element['shared_key'] = self.shared_key
             self.packet_element_list.append(packet_element)
 
     # 添加一个被加密的的文件的位置到列表里面

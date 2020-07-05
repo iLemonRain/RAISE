@@ -25,9 +25,9 @@ if __name__ == '__main__':
     # shake_hand = 
     # sender.StartShakeHand()
     # 要传输的文件
-    sender.SetPlainBytes("著作权.zip")
+    sender.SetPlainBytes("废都.txt")
     # 设定单个数据分片的长度,并进行分片,并设定真实分片和掩护流量分片的比例
-    sender.SetFragmentList(1000*1000, 1)
+    sender.SetFragmentList(1000*100, 1)
     # 设定一系列要发送包的组成元素(头部和未加密的数据部分)的列表
     sender.GeneratePacketElementList()
     # 将每个分片的组成元素加入文件里面,并发送
@@ -53,7 +53,7 @@ if __name__ == '__main__':
         receiver.ReceiveEncryptedFileList(platform="Github")
         # 从接收到的被加密文件列表中找到本接受者对象想要的内容(发送方和接收方都要求对的上设定)
         for encrypted_file_dir in receiver.GetEncryptedFileDirList():
-            data_file_decoder = DataFileDecoder(encrypted_file_dir, receiver.GetReceiverPrivateKey())
+            data_file_decoder = DataFileDecoder(encrypted_file_dir, receiver.GetReceiverPrivateKey(), receiver.GetSharedKey())
             # 判断发送者和接收者是不是对的人,以及是不是掩护流量,如果符合条件的话才对这个文件进行处理
             if data_file_decoder.CheckNameAndCoverTraffic(receiver.GetSenderName(), receiver.GetReceiverName()) is True:
                 data_file_decoder.GeneratePacketElement()
@@ -66,5 +66,5 @@ if __name__ == '__main__':
     receiver.SortPacketElementList()
     receiver.GeneratePlainBytes()
     # 还原出文件来
-    with open('著作权还原.zip', 'wb+')as f:
+    with open('废都还原.txt', 'wb+')as f:
         f.write(receiver.GetPlainBytes())

@@ -4,6 +4,7 @@ from git.exc import InvalidGitRepositoryError
 import time
 import shutil
 
+
 # 根据文件夹的路径获取仓库
 def SetRepo(repo_dir, repo_url):
     try:
@@ -14,7 +15,7 @@ def SetRepo(repo_dir, repo_url):
         repo.create_remote(name='origin', url=repo_url)
     except InvalidGitRepositoryError:
         print("这个目录里面没有git信息,正在删除目录并克隆一个...")
-        shutil.rmtree(repo_dir) # 递归删除文件夹
+        shutil.rmtree(repo_dir)  # 递归删除文件夹
         repo = Repo.init(path=repo_dir)
         repo.create_remote(name='origin', url=repo_url)
     finally:
@@ -50,5 +51,5 @@ def GetDiffFileDirList(repo):
     return diff_file_dir_list
 
 
-# if __name__ == '__main__':
-#     repo = SetRepo('./repo', "https://github.com/iLemonRain/testgithubcovertcommunication.git")
+if __name__ == '__main__':
+    pass
