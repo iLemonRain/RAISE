@@ -23,19 +23,16 @@ def sender():
     # 开始握手
     # sender.InitECDH()
     # sender.GenerateLocalECDHPublicKey("local_public_key.pem")
-    # sender.GenerateShakeHandPacket()
+    # sender.GenerateShakeHandFragment()
     # shake_hand = 
     # sender.StartShakeHand()
-    # 要传输的文件
-    sender.GeneratePlainBytes("./testfiles/原图.png")
     # 设定单个数据分片的长度,并进行分片,并设定真实分片和掩护流量分片的比例
-    # sender.GenerateFragmentList(1000*100, 0)
-    sender.GenerateFragmentList(int(329/5), 1)
+    sender.GenerateFragmentList("./testfiles/原图.png", int(329/5), 1)
     # 设定一系列要发送包的组成元素(头部和未加密的数据部分)的列表
-    sender.GeneratePacketElementList()
+    sender.AddToFragmentElementList()
     # 将每个分片的组成元素加入文件里面,并发送
-    for packet_element in sender.GetPacketElementList():
-        data_file_encoder = DataFileEncoder(packet_element, sender.GetReceiverPublicKey())
+    for fragment_element in sender.GetFragmentElementList():
+        data_file_encoder = DataFileEncoder(fragment_element, sender.GetReceiverPublicKey())
         data_file_encoder.GenerateEncryptedFile()
         sender.AddToEncryptedFileDirList(data_file_encoder.GetEncryptedFileDir())
     # 发送所有被加密的文件到仓库
@@ -61,14 +58,14 @@ def receiver():
             data_file_decoder = DataFileDecoder(encrypted_file_dir, receiver.GetReceiverPrivateKey(), receiver.GetSharedKey())
             # 判断发送者和接收者是不是对的人,以及是不是掩护流量,如果符合条件的话才对这个文件进行处理
             if data_file_decoder.CheckNameAndCoverTraffic(receiver.GetSenderName(), receiver.GetReceiverName()) is True:
-                data_file_decoder.GeneratePacketElement()
-                receiver.AddToPacketElementList(data_file_decoder.GetPacketElement())
+                data_file_decoder.GenerateFragmentElement()
+                receiver.AddToFragmentElementList(data_file_decoder.GetFragmentElement())
         # 判断是不是已经把所有包都接受完全
         if receiver.CheckIntegrity() is True:
             break
         else:
             time.sleep(3)
-    receiver.SortPacketElementList()
+    receiver.SortFragmentElementList()
     receiver.GeneratePlainBytes()
     # 还原出文件来
     with open('./testfiles/原图还原.png', 'wb+')as f:
