@@ -1,24 +1,47 @@
 # 对单个文件的操作
-import functiontimer
 import os
 import cryptotools
 
-
-# 握手文件的的属性和基本方法
-class ShakeHandFile(object):
+# 规定了所有文件文件名当中的内容,以及一些基本属性
+class BasicFile(object):
     # 构造函数
     def __init__(self):
-        # 包的通用组成元素
-        self.sender_name = ""               # 发送方的名字或代号
-        self.receiver_name = ""             # 接收方的名字或代号
-        self.type_of_use = -1               # 本报文用途.0为传输数据,1为发起握手,2为回应握手,3为发起挥手,4为响应挥手
-        self.full_data_length = -1          # 本报文中的data在组合完全后的长度
-        # 作为握手包的已被加密的文件的路径
-        self.encrypted_file_dir = ""        # 已被加密文件的路径
+        # 包元素的整体
+        self.packet_element = {}                # 含有所有的包元素
+        # 文件名中的内容
+        self.sender_name = None                 # 发送方的名字或代号
+        self.receiver_name = None               # 接收方的名字或代号
+        self.cover_traffic = None               # 不是掩护流量为0,是掩护流量为1.掩护流量将不会被分析
+        self.type_of_use = None                 # 用途.0为传输数据,1为发起握手,2为回应握手,3为发起挥手,4为响应挥手
+        self.full_data_length = None            # 本报文中的data在组合完全后的长度
+        self.identification = None              # 标识.完整的报文的所有切片都具有统一的标识
+        self.fragment_data_length = None        # 本切片的数据部分长度
+        self.sn_of_fragment = None              # 本切片的编号
+        self.more_fragment = None               # MF,是否还有分片位,1表示后面还有分片,0表示已经是最后分片
+        self.nonce = None                       # 12字节随机数,用于数据传输时的消息验证
+        # 数据部分
+        self.data = None                        # 数据部分(未加密)
+        # 秘钥
+        self.sender_public_key = None           # 发送方的公钥
+        self.sender_private_key = None          # 发送方的私钥
+        self.receiver_public_key = None         # 接收方的公钥
+        self.receiver_private_key = None        # 接收方的私钥
+        self.symmetric_key = None               # 用于加密数据的对称秘钥
+        # 仓库地址
+        self.repo_dir = None                    # 交流用的仓库的地址
+        # 未加密和加密过的包文本
+        self.unencrypted_packet_header = None   # 未加密的包头部
+        self.encrypted_packet_header = None     # 已加密的包头部
+        self.unencrypted_packet_data = None     # 未加密的包数据部分
+        self.encrypted_packet_data = None       # 已加密的包数据部分
+        # 作为信息载体的已被加密的文件的路径
+        self.encrypted_file_dir = None          # 已被加密文件的路径
+        # ECDH出的对称秘钥
+        self.shared_key = None                  # ECDH出的32字节秘钥
 
 
 # 发送方对握手文件进行的处理,目的是生成握手文件
-class ShakeHandFileEncoder(ShakeHandFile):
+class ShakeHandFileEncoder(BasicFile):
     # 构造函数
     def __init__(self, packet_element):
         self.packet_element = packet_element
@@ -33,7 +56,7 @@ class ShakeHandFileEncoder(ShakeHandFile):
 
 
 # 接收方对握手文件进行的处理,目的是ECDH出对称密钥
-class ShakeHandFileDecoder(ShakeHandFile):
+class ShakeHandFileDecoder(BasicFile):
     # 构造函数
     def __init__(self):
         pass
@@ -43,56 +66,8 @@ class ShakeHandFileDecoder(ShakeHandFile):
         pass
 
 
-# 数据文件的的属性和基本方法
-class DataFile(object):
-    # 构造函数
-    def __init__(self):
-        # 包元素的整体
-        self.packet_element = {}            # 含有所有的包元素
-        # 包的通用组成元素
-        self.sender_name = ""               # 发送方的名字或代号
-        self.receiver_name = ""             # 接收方的名字或代号
-        self.cover_traffic = -1             # 不是掩护流量为0,是掩护流量为1.掩护流量将不会被分析
-        self.type_of_use = -1               # 本报文用途.0为传输数据,1为发起握手,2为回应握手,3为发起挥手,4为响应挥手
-        self.full_data_length = -1          # 本报文中的data在组合完全后的长度
-        self.identification = -1            # 标识.完整的报文的所有切片都具有统一的标识
-        self.fragment_data_length = -1      # 本切片的数据部分长度
-        self.sn_of_fragment = -1            # 本切片的编号
-        self.more_fragment = -1             # MF,是否还有分片位,1表示后面还有分片,0表示已经是最后分片
-        self.nonce = b""                    # 12字节随机数,用于数据传输时的消息验证
-        self.data = ""                      # 数据部分(未加密)
-        # 秘钥
-        self.sender_public_key = ""         # 发送方的公钥
-        self.sender_private_key = ""        # 发送方的私钥
-        self.receiver_public_key = ""       # 接收方的公钥
-        self.receiver_private_key = ""      # 接收方的私钥
-        self.symmetric_key = ""             # 用于加密数据的对称秘钥
-        # 仓库地址
-        self.repo_dir = ""                  # 交流用的仓库的地址
-        # 未加密和加密过的包文本
-        self.unencrypted_packet_header = "" # 未加密的包头部
-        self.encrypted_packet_header = ""   # 已加密的包头部
-        self.unencrypted_packet_data = ""   # 未加密的包数据部分
-        self.encrypted_packet_data = ""     # 已加密的包数据部分
-        # 作为信息载体的已被加密的文件的路径
-        self.encrypted_file_dir = ""        # 已被加密文件的路径
-        # ECDH出的对称秘钥
-        self.shared_key = b''               # ECDH出的32字节秘钥
-
-    # 打印整个数据包
-    def PrintPacketInfo(self, print_all=True):
-        if print_all:
-            print(dict(list(self.__dict__.items())[0:-1]))
-        else:
-            print(dict(list(self.__dict__.items())))
-
-    # 验证完整性
-    def CheckIntegrity(self):
-        pass
-
-
-# 对"单个"数据分片加上头部后加密,使之变成一个数据包,随后隐写入文件
-class DataFileEncoder(DataFile):
+# 对单个文件的加密处理
+class DataFileEncoder(BasicFile):
     # 构造函数
     def __init__(self, packet_element, receiver_public_key):
         # 从基类引入基础属性
@@ -150,8 +125,8 @@ class DataFileEncoder(DataFile):
         return self.encrypted_file_dir
 
 
-# 对"单个"数据包的解隐写和解密处理
-class DataFileDecoder(DataFile):
+# 对单个文件的解密处理
+class DataFileDecoder(BasicFile):
     # 构造函数
     def __init__(self, encrypted_file_dir, receiver_private_key, shared_key):
         # 从基类引入基础属性

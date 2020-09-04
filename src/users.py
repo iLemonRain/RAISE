@@ -106,14 +106,14 @@ class Sender(Peer):
         pass
 
     # 将文件转为未加密的数据
-    @functiontimer.fn_timer
-    def SetPlainBytes(self, file):
+    # @functiontimer.fn_timer
+    def GeneratePlainBytes(self, file):
         with open(file, 'rb') as f:
             self.plain_bytes = f.read()
 
     # 将大段未加密数据分片成几片小段的未加密数据
-    @functiontimer.fn_timer
-    def SetFragmentList(self, fragment_data_length, cover_traffic_ratio):
+    # @functiontimer.fn_timer
+    def GenerateFragmentList(self, fragment_data_length, cover_traffic_ratio):
         # 生成数据流量分片列表,每个数据流量分片长度和fragment_data_length一样
         real_fragment_num = math.ceil(len(self.plain_bytes) / fragment_data_length)
         data_fragment_list = []
@@ -141,7 +141,7 @@ class Sender(Peer):
         return self.unencrypted_fragment_list
 
     # 生成一系列要发送包的组成元素(头部和未加密的数据部分)的列表
-    @functiontimer.fn_timer
+    # @functiontimer.fn_timer
     def GeneratePacketElementList(self):
         for i in range(0, len(self.unencrypted_fragment_list)):
             packet_element = {}
@@ -164,7 +164,7 @@ class Sender(Peer):
         self.encrypted_file_dir_list.append(encrypted_file_dir)
 
     # 将所有的被加密文件传送到仓库
-    @functiontimer.fn_timer
+    # @functiontimer.fn_timer
     def SendEncryptedFileList(self, platform):
         # 平台采用Github的话,要push的文件路径需要是相对于git仓库的路径
         if platform == "Github":
@@ -194,7 +194,7 @@ class Receiver(Peer):
         return self.receiver_private_key
 
     # 从仓库接收所有被加密的文件
-    @functiontimer.fn_timer
+    # @functiontimer.fn_timer
     def ReceiveEncryptedFileList(self, platform):
         # 记录pull操作之前,文件夹里面都有什么文件
         file_dir_dict_before = dict([(f, None) for f in glob.glob(os.path.join(self.repo_dir, '*'))])
@@ -236,10 +236,43 @@ class Receiver(Peer):
         return False
 
     # 将包元素列表进行排序
-    @functiontimer.fn_timer
+    # @functiontimer.fn_timer
     def SortPacketElementList(self):
         self.packet_element_list = sorted(self.packet_element_list, key=lambda keys: keys['sn_of_fragment'])
 
     # 由各包元素生成明文
     def GeneratePlainBytes(self):
         self.plain_bytes = b"".join([packet_element["data"] for packet_element in self.packet_element_list])
+
+
+class Syncer(object):
+    # 构造函数
+    def __init__(self, mode, repo_dir, repo_url):
+        self.mode = mode            # 设定是用哪种类型的仓库,比如是git还是其他
+        self.repo_dir = repo_dir
+        self.repo_url = repo_url
+        self.repo = None
+        self.send_list = []         # 已经准备好发送的的文件列表
+        self.receive_list = []      # 接收到的文件的列表
+
+    # 初始化仓库
+    # 设置本地仓库
+    def InitRepo(self):
+        if self.mode == 'git':
+            self.repo = repotools.SetRepo(self.repo_dir, self.repo_url)
+
+    # 设定待发送列表
+    def SetSendList(self, send_list):
+        self.send_list = send_list
+
+    # 获得接收列表
+    def GetReceiveList(self):
+        return self.receive_list
+
+    # 获得仓库目录
+    def GetRepoDir(self):
+        return self.repo_dir
+
+    # 完成一次同步
+    def Sync(self):
+        pass

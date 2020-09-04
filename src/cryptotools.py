@@ -13,10 +13,10 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 def GenerateRSAKeyFile(bit_num):
     (pubkey, private_key) = rsa.newkeys(bit_num)
     pub = pubkey.save_pkcs1()
-    with open('./config/publickey.pem', 'wb+')as f:
+    with open('./config/local_publickey.pem', 'wb+')as f:
         f.write(pub)
     pri = private_key.save_pkcs1()
-    with open('./config/privatekey.pem', 'wb+')as f:
+    with open('./config/local_privatekey.pem', 'wb+')as f:
         f.write(pri)
 
 
@@ -46,7 +46,7 @@ def RSADecodeData(data, private_key):
 
 
 # 根据椭圆曲线类型,初始化ECDH
-@functiontimer.fn_timer
+# @functiontimer.fn_timer
 def ECDHInit():
     ecdh = ECDH(NIST256p)
     ecdh.generate_private_key()
@@ -54,14 +54,14 @@ def ECDHInit():
 
 
 # 生成ECDH所用的临时公钥(pem格式)
-@functiontimer.fn_timer
+# @functiontimer.fn_timer
 def GenerateECDHPublicKey(ecdh):
     local_public_key = ecdh.get_public_key().to_pem()
     return local_public_key
 
 
 # 根据自己的私钥和对方传来的公钥生成本次加密传输所需的对称秘钥:
-@functiontimer.fn_timer
+# @functiontimer.fn_timer
 def GenerateECDHSharedKey(ecdh, remote_public_key):
     ecdh.load_received_public_key_pem(remote_public_key)
     shared_key = ecdh.generate_sharedsecret_bytes()
@@ -83,14 +83,14 @@ def CC20P1305Init(key):
 
 
 # 利用96位随机数(12个字节)生成密文,并返回ChaCha20-Poly1305密文
-@functiontimer.fn_timer
+# @functiontimer.fn_timer
 def CC20P1305Encrypt(chacha, nonce, unencrypted_data):
     encrypted_data = chacha.encrypt(nonce, unencrypted_data, None)
     return encrypted_data
 
 
 # 利用96位随机数(12个字节)解读ChaCha20-Poly1305密文,并返回解密结果
-@functiontimer.fn_timer
+# @functiontimer.fn_timer
 def CC20P1305Decrypt(chacha, nonce, encrypted_data):
     unencrypted_data = chacha.decrypt(nonce, encrypted_data, None)
     return unencrypted_data
@@ -103,14 +103,14 @@ def AES256GCMInit(key):
 
 
 # 利用96位随机数(12个字节)生成密文,并返回ChaCha20-Poly1305密文
-@functiontimer.fn_timer
+# @functiontimer.fn_timer
 def AES256GCMEncrypt(aesgcm, nonce, unencrypted_data):
     encrypted_data = aesgcm.encrypt(nonce, unencrypted_data, None)
     return encrypted_data
 
 
 # 利用96位随机数(12个字节)解读ChaCha20-Poly1305密文,并返回解密结果
-@functiontimer.fn_timer
+# @functiontimer.fn_timer
 def AES256GCMDecrypt(aesgcm, nonce, encrypted_data):
     unencrypted_data = aesgcm.decrypt(nonce, encrypted_data, None)
     return unencrypted_data
@@ -120,41 +120,41 @@ def AES256GCMDecrypt(aesgcm, nonce, encrypted_data):
 if __name__ == '__main__':
     # 模拟RSA
     GenerateRSAKeyFile(1024)
-    public_key = GetRSAPublicKey('./config/publickey.pem')
-    crypto = RSAEncodeData("lemon cherry 1 328 1 100 0 1", public_key)
-    print(crypto)
-    private_key = GetRSAPrivateKey('./config/privatekey.pem')
+    public_key = GetRSAPublicKey('./config/remote_publickey.pem')
+    crypto = RSAEncodeData("Hi! Someone stoled my email and my steam account rus_lemonrain at IP 223.152.11.11 several hours ago432435775243432", public_key)
+    print(len(crypto))
+    private_key = GetRSAPrivateKey('./config/remote_privatekey.pem')
     message1 = RSADecodeData(crypto, private_key)
     print(message1.decode('utf-8'))
 
     # # 模拟ECDH
-    ecdh_1 = ECDHInit()
-    local_ecdh_public_key = GenerateECDHPublicKey(ecdh_1)
-    ecdh_2 = ECDHInit()
-    remote_ecdh_public_key = GenerateECDHPublicKey(ecdh_2)
-    shared_key_1 = GenerateECDHSharedKey(ecdh_1, remote_ecdh_public_key)
-    shared_key_2 = GenerateECDHSharedKey(ecdh_2, local_ecdh_public_key)
-    nonce = GenerateAEADNonce()
-    if shared_key_1 == shared_key_2:
-        print("两边生成了相同的ECDH秘钥:", shared_key_1)
+    # ecdh_1 = ECDHInit()
+    # local_ecdh_public_key = GenerateECDHPublicKey(ecdh_1)
+    # ecdh_2 = ECDHInit()
+    # remote_ecdh_public_key = GenerateECDHPublicKey(ecdh_2)
+    # shared_key_1 = GenerateECDHSharedKey(ecdh_1, remote_ecdh_public_key)
+    # shared_key_2 = GenerateECDHSharedKey(ecdh_2, local_ecdh_public_key)
+    
+    # if shared_key_1 == shared_key_2:
+    #     print("两边生成了相同的ECDH秘钥:", shared_key_1)
 
-    with open('视频测试.mp4', 'rb')as f:
-        ready_file = f.read()
+    # with open('视频测试.mp4', 'rb')as f:
+    #     ready_file = f.read()
+      # nonce = GenerateAEADNonce()
+    # chacha_1 = CC20P1305Init(shared_key_1)
+    # encrypted_data = CC20P1305Encrypt(chacha_1, nonce, ready_file)
+    # with open('CC20P1305加密.mp4', 'wb')as f:
+    #     f.write(encrypted_data)
+    # chacha_2 = CC20P1305Init(shared_key_2)
+    # unencrypted_data = CC20P1305Decrypt(chacha_2, nonce, encrypted_data)
+    # with open('CC20P1305还原.mp4', 'wb')as f:
+    #     f.write(unencrypted_data)
 
-    chacha_1 = CC20P1305Init(shared_key_1)
-    encrypted_data = CC20P1305Encrypt(chacha_1, nonce, ready_file)
-    with open('CC20P1305加密.mp4', 'wb')as f:
-        f.write(encrypted_data)
-    chacha_2 = CC20P1305Init(shared_key_2)
-    unencrypted_data = CC20P1305Decrypt(chacha_2, nonce, encrypted_data)
-    with open('CC20P1305还原.mp4', 'wb')as f:
-        f.write(unencrypted_data)
-
-    aesgcm_1 = AES256GCMInit(shared_key_1)
-    encrypted_data = AES256GCMEncrypt(aesgcm_1, nonce, ready_file)
-    with open('AES256GCM加密.mp4', 'wb')as f:
-        f.write(encrypted_data)
-    aesgcm_2 = AES256GCMInit(shared_key_2)
-    unencrypted_data = AES256GCMDecrypt(aesgcm_2, nonce, encrypted_data)
-    with open('AES256GCM还原.mp4', 'wb')as f:
-        f.write(unencrypted_data)
+    # aesgcm_1 = AES256GCMInit(shared_key_1)
+    # encrypted_data = AES256GCMEncrypt(aesgcm_1, nonce, ready_file)
+    # with open('AES256GCM加密.mp4', 'wb')as f:
+    #     f.write(encrypted_data)
+    # aesgcm_2 = AES256GCMInit(shared_key_2)
+    # unencrypted_data = AES256GCMDecrypt(aesgcm_2, nonce, encrypted_data)
+    # with open('AES256GCM还原.mp4', 'wb')as f:
+    #     f.write(unencrypted_data)

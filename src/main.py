@@ -3,8 +3,10 @@ from files import DataFileEncoder, DataFileDecoder
 from users import Sender, Receiver
 import os
 import time
+import functiontimer
 
-if __name__ == '__main__':
+@functiontimer.fn_timer
+def sender():
     # 不管用户从什么位置用终端执行此py文件,都将根目录设置为此工程根目录
     work_dir = os.path.abspath(os.path.join(__file__, "../.."))
     os.chdir(work_dir)
@@ -17,7 +19,7 @@ if __name__ == '__main__':
     # 设定仓库信息
     sender.SetRepo('./repo_send', "https://gitee.com/iLemonRain/raise_data.git")
     # 设定接收方公钥
-    sender.SetReceiverPublicKey("./config/publickey.pem")
+    sender.SetReceiverPublicKey("./config/remote_publickey.pem")
     # 开始握手
     # sender.InitECDH()
     # sender.GenerateLocalECDHPublicKey("local_public_key.pem")
@@ -25,9 +27,10 @@ if __name__ == '__main__':
     # shake_hand = 
     # sender.StartShakeHand()
     # 要传输的文件
-    sender.SetPlainBytes("废都.txt")
+    sender.GeneratePlainBytes("./testfiles/原图.png")
     # 设定单个数据分片的长度,并进行分片,并设定真实分片和掩护流量分片的比例
-    sender.SetFragmentList(1000*100, 1)
+    # sender.GenerateFragmentList(1000*100, 0)
+    sender.GenerateFragmentList(int(329/5), 1)
     # 设定一系列要发送包的组成元素(头部和未加密的数据部分)的列表
     sender.GeneratePacketElementList()
     # 将每个分片的组成元素加入文件里面,并发送
@@ -39,6 +42,8 @@ if __name__ == '__main__':
     sender.SendEncryptedFileList(platform="Github")
     del sender
 
+@functiontimer.fn_timer
+def receiver():
     # 建立一个接收方对象,之后可以定期从仓库拉取不同发送者的内容
     receiver = Receiver()
     # 设定发送者和接收者的代号
@@ -47,7 +52,7 @@ if __name__ == '__main__':
     # 设定仓库信息
     receiver.SetRepo("./repo_receive", "https://gitee.com/iLemonRain/raise_data.git")
     # 设定接收方私钥
-    receiver.SetReceiverPrivateKey("./config/privatekey.pem")
+    receiver.SetReceiverPrivateKey("./config/remote_privatekey.pem")
     while True:
         # 从仓库pull最新的被加密的文件,并生成加密文件列表
         receiver.ReceiveEncryptedFileList(platform="Github")
@@ -66,5 +71,10 @@ if __name__ == '__main__':
     receiver.SortPacketElementList()
     receiver.GeneratePlainBytes()
     # 还原出文件来
-    with open('废都还原.txt', 'wb+')as f:
+    with open('./testfiles/原图还原.png', 'wb+')as f:
         f.write(receiver.GetPlainBytes())
+
+
+if __name__ == '__main__':
+    sender()
+    receiver()

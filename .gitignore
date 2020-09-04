@@ -144,6 +144,10 @@ cython_debug/
 .vscode/*
 
 # 工程验证代码文件
+*.pem
 src/获得文件列表.py
 repo
 src/原文.txt
+repo_s
+repo_r
+testfiles
