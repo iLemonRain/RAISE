@@ -6,7 +6,7 @@ import shutil
 
 
 # 根据文件夹的路径获取仓库
-def SetRepo(repo_dir, repo_url):
+def SetRepoDir(repo_dir, repo_url):
     try:
         repo = Repo(repo_dir)
     except NoSuchPathError:

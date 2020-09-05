@@ -71,11 +71,14 @@ class ShakeHandFileDecoder(BasicFile):
 # 对单个文件的加密处理
 class DataFileEncoder(BasicFile):
     # 构造函数
-    def __init__(self, fragment_element, receiver_public_key):
+    def __init__(self, fragment_element, repo_dir, receiver_public_key, shared_key):
         # 从基类引入基础属性
         super(DataFileEncoder, self).__init__()
-        # 加密头部的秘钥
+        # 密钥
         self.receiver_public_key = receiver_public_key
+        self.shared_key = shared_key
+        # 仓库地址
+        self.repo_dir = repo_dir
         # 获得包头部元素
         self.fragment_element = fragment_element
         self.sender_name = self.fragment_element['sender_name']
@@ -92,12 +95,8 @@ class DataFileEncoder(BasicFile):
         self.nonce = bytes(self.fragment_element['nonce'], encoding="ascii")
         # 获得包数据部分
         self.data = self.fragment_element['data']
-        # 仓库地址
-        self.repo_dir = self.fragment_element['repo_dir']
-        # 获得对称秘钥
-        self.shared_key = self.fragment_element['shared_key']
         # 获得加密的头部和数据
-        self.unencrypted_fragment_header = " ".join([str(i) for i in list(fragment_element.values())[0:-3]])  # 将头部元素压缩成字符串
+        self.unencrypted_fragment_header = " ".join([str(i) for i in list(fragment_element.values())[0:-1]])  # 将头部元素压缩成字符串
         self.unencrypted_fragment_data = self.data
 
     # 获取未加密的头部(文件名)字符串

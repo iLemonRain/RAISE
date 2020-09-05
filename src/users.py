@@ -18,7 +18,7 @@ class Peer(object):
         self.receiver_name = ""              # 接收方的名字或代号
         # 仓库对象
         self.repo = None                     # 仓库对象
-        self.repo_dir = []                   # 仓库根目录
+        self.repo_dir = None                 # 仓库根目录
         # 待发送的文件名
         self.file_name = None                # 待发送的文件名
         # 自己和对方的秘钥对
@@ -35,8 +35,6 @@ class Peer(object):
         self.fragment_data_length = -1       # 每个分片中数据的长度
         self.plain_bytes = b""               # 未加密的字节流
         self.unencrypted_fragment_list = []  # 未加密的数据分片的列表(包含数据分片和掩护流量分片)
-        # 和传输的数据包的构成有关
-        self.fragment_element_list = []      # 所有经过发送方或者接收方处理(添加/忽略掩护流量分片)后的包元素列表
         # ECDH出的对称秘钥
         self.shared_key = b'e\x7fx\xb2A\x04\x89Z\x06K\xf7I[fZ\xf39\xa3t\x9d\xa9Hk\xd1-6\xef\xef\xf1\xf8\xf71'
 
@@ -56,14 +54,18 @@ class Peer(object):
     def GetReceiverName(self):
         return self.receiver_name
 
-    # 设置本地仓库
-    def SetRepo(self, repo_dir, repo_url):
+    # 设置本地仓库目录
+    def SetRepoDir(self, repo_dir, repo_url):
         self.repo_dir = repo_dir
-        self.repo = repotools.SetRepo(repo_dir, repo_url)
+        self.repo = repotools.SetRepoDir(repo_dir, repo_url)
+
+    # 获得本地仓库目录
+    def GetRepoDir(self):
+        return self.repo_dir
 
     # 获得所有未加密的数据包元素列表,用来生成一个个数据包
-    def GetFragmentElementList(self):
-        return self.fragment_element_list
+    def GetUnencryptedFragmentList(self):
+        return self.unencrypted_fragment_list
 
     # 获得要发送的原始数据
     def GetPlainBytes(self):
@@ -128,54 +130,47 @@ class Sender(Peer):
         data_fragment_list = []
         for i in range(0, len(self.plain_bytes), fragment_data_length):
             sn_of_fragment = int(i / fragment_data_length)
-            data_fragment_list.append({'data': self.plain_bytes[i:i + fragment_data_length],
+            data_fragment_list.append({
+                                       'sender_name': self.sender_name,
+                                       'receiver_name': self.receiver_name,
                                        'cover_traffic': 0,
                                        'type_of_use': 1,
                                        'file_name': self.file_name,
+                                       'full_data_length': len(self.plain_bytes),
+                                       'identification': 1,
+                                       'fragment_data_length': len(self.plain_bytes[i:i + fragment_data_length]),
                                        'sn_of_fragment': sn_of_fragment,
                                        'more_fragment': 0 if sn_of_fragment == real_fragment_num - 1 else 1,
-                                       'timer': 1000})
+                                       'timer': 1000,
+                                       'nonce': str(cryptotools.GenerateAEADNonce(), encoding="ascii"),
+                                       'data': self.plain_bytes[i:i + fragment_data_length]})
         # 生成掩护流量分片列表,每个掩护流量分片长度和fragment_data_length一样
         cover_traffic_fragment_num = int(real_fragment_num * cover_traffic_ratio)
         cover_traffic_fragment_list = []
         for i in range(0, cover_traffic_fragment_num):
             random_bytes = os.urandom(fragment_data_length)
-            cover_traffic_fragment_list.append({'data': random_bytes,
+            cover_traffic_fragment_list.append({
+                                                'sender_name': self.sender_name,
+                                                'receiver_name': self.receiver_name,
                                                 'cover_traffic': 1,
                                                 'type_of_use': 1,
                                                 'file_name': self.file_name,
+                                                'full_data_length': len(self.plain_bytes),
+                                                'identification': 1,
+                                                'fragment_data_length': len(random_bytes),
                                                 'sn_of_fragment': -1,
                                                 'more_fragment': -1,
-                                                'timer': 1000})
+                                                'timer': 1000,
+                                                'nonce': str(cryptotools.GenerateAEADNonce(), encoding="ascii"),
+                                                'data': random_bytes})
         # 添加上掩护流量列表,并进行随机混合
         self.unencrypted_fragment_list = data_fragment_list + cover_traffic_fragment_list
         random.shuffle(self.unencrypted_fragment_list)
+        self.unencrypted_fragment_list = self.unencrypted_fragment_list
 
     # 返回未加密的数据分片列表
     def GetFragmentList(self):
         return self.unencrypted_fragment_list
-
-    # 生成一系列要发送包的组成元素(头部和未加密的数据部分)的列表
-    # @functiontimer.fn_timer
-    def AddToFragmentElementList(self):
-        for i in range(0, len(self.unencrypted_fragment_list)):
-            fragment_element = {}
-            fragment_element['sender_name'] = self.sender_name
-            fragment_element['receiver_name'] = self.receiver_name
-            fragment_element['cover_traffic'] = self.unencrypted_fragment_list[i]['cover_traffic']
-            fragment_element['type_of_use'] = self.unencrypted_fragment_list[i]['type_of_use']
-            fragment_element['file_name'] = self.unencrypted_fragment_list[i]['file_name']
-            fragment_element['full_data_length'] = len(self.plain_bytes)
-            fragment_element['identification'] = 1  # 这个机制还没做
-            fragment_element['fragment_data_length'] = len(self.unencrypted_fragment_list[i]['data'])
-            fragment_element['sn_of_fragment'] = self.unencrypted_fragment_list[i]['sn_of_fragment']
-            fragment_element['more_fragment'] = self.unencrypted_fragment_list[i]['more_fragment']
-            fragment_element['timer'] = self.unencrypted_fragment_list[i]['timer']
-            fragment_element['nonce'] = str(cryptotools.GenerateAEADNonce(), encoding="ascii")
-            fragment_element['data'] = self.unencrypted_fragment_list[i]['data']
-            fragment_element['repo_dir'] = self.repo_dir
-            fragment_element['shared_key'] = self.shared_key
-            self.fragment_element_list.append(fragment_element)
 
     # 添加一个被加密的的文件的位置到列表里面
     def AddToEncryptedFileDirList(self, encrypted_file_dir):
@@ -231,24 +226,24 @@ class Receiver(Peer):
         return self.encrypted_file_dir_list
 
     # 将收到的元素组合包加入包列表
-    def AddToFragmentElementList(self, fragment_element):
-        self.fragment_element_list.append(fragment_element)
+    def AddToUnencryptedFragmentList(self, fragment_element):
+        self.unencrypted_fragment_list.append(fragment_element)
 
     # 检查当前有没有接收完所有的包
     def CheckIntegrity(self):
         # 校验这一系列包是不是总长度信息一致
-        for i in range(len(self.fragment_element_list) - 1):
-            if self.fragment_element_list[i]["full_data_length"] != self.fragment_element_list[i]["full_data_length"]:
+        for i in range(len(self.unencrypted_fragment_list) - 1):
+            if self.unencrypted_fragment_list[i]["full_data_length"] != self.unencrypted_fragment_list[i]["full_data_length"]:
                 return False
         # 检查是不是所有片段的长度加起来等于总长度
-        sn_of_fragment_sum = sum([fragment_element["fragment_data_length"] for fragment_element in self.fragment_element_list])
-        if sn_of_fragment_sum != self.fragment_element_list[0]["full_data_length"]:
+        sn_of_fragment_sum = sum([fragment_element["fragment_data_length"] for fragment_element in self.unencrypted_fragment_list])
+        if sn_of_fragment_sum != self.unencrypted_fragment_list[0]["full_data_length"]:
             return False
         # 判断是否已经收到了max_sn之前的所有包,如果是的话检查max_sn对应的包是不是最后一个包
-        sn_of_fragment_list = [fragment_element["sn_of_fragment"] for fragment_element in self.fragment_element_list]
+        sn_of_fragment_list = [fragment_element["sn_of_fragment"] for fragment_element in self.unencrypted_fragment_list]
         max_sn = max(sn_of_fragment_list)
         if set(sn_of_fragment_list) == set([i for i in range(0, max_sn + 1)]):
-            for fragment_element in self.fragment_element_list:
+            for fragment_element in self.unencrypted_fragment_list:
                 if fragment_element['sn_of_fragment'] == max_sn and fragment_element['more_fragment'] == 0:
                     self.file_name = fragment_element['file_name']
                     return True  # 已经是最后一个包,证明接收完全
@@ -257,11 +252,11 @@ class Receiver(Peer):
     # 将包元素列表进行排序
     # @functiontimer.fn_timer
     def SortFragmentElementList(self):
-        self.fragment_element_list = sorted(self.fragment_element_list, key=lambda keys: keys['sn_of_fragment'])
+        self.unencrypted_fragment_list = sorted(self.unencrypted_fragment_list, key=lambda keys: keys['sn_of_fragment'])
 
     # 由各包元素生成明文
     def SaveOriginalFile(self, file_folder_dir):
-        self.plain_bytes = b"".join([fragment_element["data"] for fragment_element in self.fragment_element_list])
+        self.plain_bytes = b"".join([fragment_element["data"] for fragment_element in self.unencrypted_fragment_list])
         with open(self.file_name, 'wb+')as f:
             f.write(self.plain_bytes)
 
@@ -280,7 +275,7 @@ class Syncer(object):
     # 设置本地仓库
     def InitRepo(self):
         if self.mode == 'git':
-            self.repo = repotools.SetRepo(self.repo_dir, self.repo_url)
+            self.repo = repotools.SetRepoDir(self.repo_dir, self.repo_url)
 
     # 设定待发送列表
     def SetSendList(self, send_list):

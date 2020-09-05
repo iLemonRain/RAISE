@@ -13,7 +13,7 @@ def sender():
     sender.SetSenderName("lemon")
     sender.SetReceiverName("cherry")
     # 设定仓库信息
-    sender.SetRepo('./repo_send', "https://gitee.com/iLemonRain/raise_data.git")
+    sender.SetRepoDir('./repo_send', "https://gitee.com/iLemonRain/raise_data.git")
     # 设定接收方公钥
     sender.SetReceiverPublicKey("./config/remote_publickey.pem")
     # 开始握手
@@ -24,11 +24,9 @@ def sender():
     # sender.StartShakeHand()
     # 设定单个数据分片的长度,并进行分片,并设定真实分片和掩护流量分片的比例
     sender.GenerateDataFragmentList("./testfiles/原图.png", int(329/5), 1)
-    # 设定一系列要发送包的组成元素(头部和未加密的数据部分)的列表
-    sender.AddToFragmentElementList()
     # 将每个分片的组成元素加入文件里面,并发送
-    for fragment_element in sender.GetFragmentElementList():
-        data_file_encoder = DataFileEncoder(fragment_element, sender.GetReceiverPublicKey())
+    for fragment_element in sender.GetUnencryptedFragmentList():
+        data_file_encoder = DataFileEncoder(fragment_element, sender.GetRepoDir(), sender.GetReceiverPublicKey(), sender.GetSharedKey())
         data_file_encoder.GenerateEncryptedFile()
         sender.AddToEncryptedFileDirList(data_file_encoder.GetEncryptedFileDir())
     # 发送所有被加密的文件到仓库
@@ -43,7 +41,7 @@ def receiver():
     receiver.SetSenderName("lemon")
     receiver.SetReceiverName("cherry")
     # 设定仓库信息
-    receiver.SetRepo("./repo_receive", "https://gitee.com/iLemonRain/raise_data.git")
+    receiver.SetRepoDir("./repo_receive", "https://gitee.com/iLemonRain/raise_data.git")
     # 设定接收方私钥
     receiver.SetReceiverPrivateKey("./config/remote_privatekey.pem")
     while True:
@@ -55,7 +53,7 @@ def receiver():
             # 判断发送者和接收者是不是对的人,以及是不是掩护流量,如果符合条件的话才对这个文件进行处理
             if data_file_decoder.CheckNameAndCoverTraffic(receiver.GetSenderName(), receiver.GetReceiverName()) is True:
                 data_file_decoder.GenerateFragmentElement()
-                receiver.AddToFragmentElementList(data_file_decoder.GetFragmentElement())
+                receiver.AddToUnencryptedFragmentList(data_file_decoder.GetFragmentElement())
         # 判断是不是已经把所有包都接受完全
         if receiver.CheckIntegrity() is True:
             break
@@ -76,7 +74,7 @@ def sh1_sender():
     sender.SetSenderName("lemon")
     sender.SetReceiverName("cherry")
     # 设定仓库信息
-    sender.SetRepo('./repo_send', "https://gitee.com/iLemonRain/raise_data.git")
+    sender.SetRepoDir('./repo_send', "https://gitee.com/iLemonRain/raise_data.git")
     # 设定接收方公钥
     sender.SetReceiverPublicKey("./config/remote_publickey.pem")
     # 开始握手
@@ -85,9 +83,9 @@ def sh1_sender():
     # 生成握手文件,并设定掩护流量分片的个数
     sender.GenerateShakeHandFragmentList(2)
     # 设定一系列要发送包的组成元素(头部和未加密的数据部分)的列表
-    sender.AddToFragmentElementList()
+    sender.AddToUnencryptedFragmentList()
     # 将每个分片的组成元素加入文件里面,并发送
-    for fragment_element in sender.GetFragmentElementList():
+    for fragment_element in sender.GetUnencryptedFragmentList():
         shake_hand_file_encoder = ShakeHandFileEncoder(fragment_element, sender.GetReceiverPublicKey())
         shake_hand_file_encoder.GenerateEncryptedFile()
         sender.AddToEncryptedFileDirList(shake_hand_file_encoder.GetEncryptedFileDir())
@@ -104,7 +102,7 @@ def sh1_receiver():
     receiver.SetSenderName("lemon")
     receiver.SetReceiverName("cherry")
     # 设定仓库信息
-    receiver.SetRepo("./repo_receive", "https://gitee.com/iLemonRain/raise_data.git")
+    receiver.SetRepoDir("./repo_receive", "https://gitee.com/iLemonRain/raise_data.git")
     # 设定接收方私钥
     receiver.SetReceiverPrivateKey("./config/remote_privatekey.pem")
     while True:
@@ -116,7 +114,7 @@ def sh1_receiver():
             # 判断发送者和接收者是不是对的人,以及是不是掩护流量,如果符合条件的话才对这个文件进行处理
             if data_file_decoder.CheckNameAndCoverTraffic(receiver.GetSenderName(), receiver.GetReceiverName()) is True:
                 data_file_decoder.GenerateFragmentElement()
-                receiver.AddToFragmentElementList(data_file_decoder.GetFragmentElement())
+                receiver.AddToUnencryptedFragmentList(data_file_decoder.GetFragmentElement())
         # 判断是不是已经把所有包都接受完全
         if receiver.CheckIntegrity() is True:
             break
