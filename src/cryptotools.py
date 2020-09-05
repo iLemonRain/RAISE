@@ -55,9 +55,10 @@ def ECDHInit():
 
 # 生成ECDH所用的临时公钥(pem格式)
 # @functiontimer.fn_timer
-def GenerateECDHPublicKey(ecdh):
+def GenerateECDHPublicKey(ecdh, ecdh_local_public_key_dir):
     local_public_key = ecdh.get_public_key().to_pem()
-    return local_public_key
+    with open(ecdh_local_public_key_dir, 'wb')as f:
+        f.write(local_public_key)
 
 
 # 根据自己的私钥和对方传来的公钥生成本次加密传输所需的对称秘钥:

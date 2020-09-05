@@ -12,12 +12,14 @@ class BasicFile(object):
         self.sender_name = None                 # 发送方的名字或代号
         self.receiver_name = None               # 接收方的名字或代号
         self.cover_traffic = None               # 不是掩护流量为0,是掩护流量为1.掩护流量将不会被分析
-        self.type_of_use = None                 # 用途.0为传输数据,1为发起握手,2为回应握手,3为发起挥手,4为响应挥手
+        self.type_of_use = None                 # 用途.0为握手,1为传输数据,2为挥手
+        self.file_name = None                   # 待发送文件的文件名
         self.full_data_length = None            # 本报文中的data在组合完全后的长度
         self.identification = None              # 标识.完整的报文的所有切片都具有统一的标识
         self.fragment_data_length = None        # 本切片的数据部分长度
         self.sn_of_fragment = None              # 本切片的编号
         self.more_fragment = None               # MF,是否还有分片位,1表示后面还有分片,0表示已经是最后分片
+        self.timer = None                       # 计时器,超时会发送失败结果确认
         self.nonce = None                       # 12字节随机数,用于数据传输时的消息验证
         # 数据部分
         self.data = None                        # 数据部分(未加密)
@@ -79,11 +81,14 @@ class DataFileEncoder(BasicFile):
         self.sender_name = self.fragment_element['sender_name']
         self.receiver_name = self.fragment_element['receiver_name']
         self.cover_traffic = self.fragment_element['cover_traffic']
+        self.type_of_use = self.fragment_element['type_of_use']
+        self.file_name = self.fragment_element['file_name']
         self.full_data_length = self.fragment_element['full_data_length']
         self.identification = self.fragment_element['identification']
         self.fragment_data_length = self.fragment_element['fragment_data_length']
         self.sn_of_fragment = self.fragment_element['sn_of_fragment']
         self.more_fragment = self.fragment_element['more_fragment']
+        self.timer = self.fragment_element['timer']
         self.nonce = bytes(self.fragment_element['nonce'], encoding="ascii")
         # 获得包数据部分
         self.data = self.fragment_element['data']
@@ -143,12 +148,15 @@ class DataFileDecoder(BasicFile):
         self.sender_name = unencrypted_fragment_header_list[0]
         self.receiver_name = unencrypted_fragment_header_list[1]
         self.cover_traffic = int(unencrypted_fragment_header_list[2])
-        self.full_data_length = int(unencrypted_fragment_header_list[3])
-        self.identification = int(unencrypted_fragment_header_list[4])
-        self.fragment_data_length = int(unencrypted_fragment_header_list[5])
-        self.sn_of_fragment = int(unencrypted_fragment_header_list[6])
-        self.more_fragment = int(unencrypted_fragment_header_list[7])
-        self.nonce = bytes(unencrypted_fragment_header_list[8], encoding="ascii")
+        self.type_of_use = int(unencrypted_fragment_header_list[3])
+        self.file_name = unencrypted_fragment_header_list[4]
+        self.full_data_length = int(unencrypted_fragment_header_list[5])
+        self.identification = int(unencrypted_fragment_header_list[6])
+        self.fragment_data_length = int(unencrypted_fragment_header_list[7])
+        self.sn_of_fragment = int(unencrypted_fragment_header_list[8])
+        self.more_fragment = int(unencrypted_fragment_header_list[9])
+        self.timer = int(unencrypted_fragment_header_list[10])
+        self.nonce = bytes(unencrypted_fragment_header_list[11], encoding="ascii")
 
     # 根据文件名检查发送方和接收方的名称,以及是不是掩护流量,决定这个文件是继续分析还是丢弃
     def CheckNameAndCoverTraffic(self, sender_name, receiver_name):
@@ -168,6 +176,8 @@ class DataFileDecoder(BasicFile):
         self.fragment_element['sender_name'] = self.sender_name
         self.fragment_element['receiver_name'] = self.receiver_name
         self.fragment_element['cover_traffic'] = self.cover_traffic
+        self.fragment_element['type_of_use'] = self.type_of_use
+        self.fragment_element['file_name'] = self.file_name
         self.fragment_element['full_data_length'] = self.full_data_length
         self.fragment_element['identification'] = self.identification
         self.fragment_element['fragment_data_length'] = self.fragment_data_length
@@ -175,6 +185,7 @@ class DataFileDecoder(BasicFile):
         self.fragment_element['more_fragment'] = self.more_fragment
         self.fragment_element['data'] = self.data
         self.fragment_element['file_dir'] = self.encrypted_file_dir
+        self.fragment_element['timer'] = self.timer
         self.fragment_element['nonce'] = self.nonce
 
     # 获得各个数据元素
