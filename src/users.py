@@ -106,15 +106,36 @@ class Sender(Peer):
     def GenerateShakeHandFragmentList(self, cover_traffic_fragment_num):
         with open(self.ecdh_local_public_key_dir, 'rb') as f:
             self.plain_bytes = f.read()
-        data_fragment_list = [].append({'data': self.plain_bytes,
-                                        'cover_traffic': 0,
-                                        'type_of_use': 0})
+        data_fragment_list = [].append({
+                                       'sender_name': self.sender_name,
+                                       'receiver_name': self.receiver_name,
+                                       'cover_traffic': 0,
+                                       'type_of_use': 0,
+                                       'file_name': None,
+                                       'full_data_length': len(self.plain_bytes),
+                                       'identification': None,
+                                       'fragment_data_length': len(self.plain_bytes),
+                                       'sn_of_fragment': None,
+                                       'more_fragment': None,
+                                       'timer': 1000,
+                                       'nonce': None,
+                                       'data': self.plain_bytes})
         cover_traffic_fragment_list = []
         for i in range(0, cover_traffic_fragment_num):
-            random_bytes = os.urandom(20) # 这就是随便定了个数
-            cover_traffic_fragment_list.append({'data': random_bytes,
+            random_bytes = os.urandom(20)  # 这就是随便定了个数
+            cover_traffic_fragment_list.append({'sender_name': self.sender_name,
+                                                'receiver_name': self.receiver_name,
                                                 'cover_traffic': 1,
-                                                'type_of_use': 0})
+                                                'type_of_use': 0,
+                                                'file_name': None,
+                                                'full_data_length': len(random_bytes),
+                                                'identification': None,
+                                                'fragment_data_length': len(random_bytes),
+                                                'sn_of_fragment': None,
+                                                'more_fragment': None,
+                                                'timer': 1000,
+                                                'nonce': None,
+                                                'data': random_bytes})
         # 添加上掩护流量列表,并进行随机混合
         self.unencrypted_fragment_list = data_fragment_list + cover_traffic_fragment_list
         random.shuffle(self.unencrypted_fragment_list)
@@ -131,38 +152,38 @@ class Sender(Peer):
         for i in range(0, len(self.plain_bytes), fragment_data_length):
             sn_of_fragment = int(i / fragment_data_length)
             data_fragment_list.append({
-                                       'sender_name': self.sender_name,
-                                       'receiver_name': self.receiver_name,
-                                       'cover_traffic': 0,
-                                       'type_of_use': 1,
-                                       'file_name': self.file_name,
-                                       'full_data_length': len(self.plain_bytes),
-                                       'identification': 1,
-                                       'fragment_data_length': len(self.plain_bytes[i:i + fragment_data_length]),
-                                       'sn_of_fragment': sn_of_fragment,
-                                       'more_fragment': 0 if sn_of_fragment == real_fragment_num - 1 else 1,
-                                       'timer': 1000,
-                                       'nonce': str(cryptotools.GenerateAEADNonce(), encoding="ascii"),
-                                       'data': self.plain_bytes[i:i + fragment_data_length]})
+                'sender_name': self.sender_name,
+                'receiver_name': self.receiver_name,
+                'cover_traffic': 0,
+                'type_of_use': 1,
+                'file_name': self.file_name,
+                'full_data_length': len(self.plain_bytes),
+                'identification': None,
+                'fragment_data_length': len(self.plain_bytes[i:i + fragment_data_length]),
+                'sn_of_fragment': sn_of_fragment,
+                'more_fragment': 0 if sn_of_fragment == real_fragment_num - 1 else 1,
+                'timer': 1000,
+                'nonce': str(cryptotools.GenerateAEADNonce(), encoding="ascii"),
+                'data': self.plain_bytes[i:i + fragment_data_length]})
         # 生成掩护流量分片列表,每个掩护流量分片长度和fragment_data_length一样
         cover_traffic_fragment_num = int(real_fragment_num * cover_traffic_ratio)
         cover_traffic_fragment_list = []
         for i in range(0, cover_traffic_fragment_num):
             random_bytes = os.urandom(fragment_data_length)
             cover_traffic_fragment_list.append({
-                                                'sender_name': self.sender_name,
-                                                'receiver_name': self.receiver_name,
-                                                'cover_traffic': 1,
-                                                'type_of_use': 1,
-                                                'file_name': self.file_name,
-                                                'full_data_length': len(self.plain_bytes),
-                                                'identification': 1,
-                                                'fragment_data_length': len(random_bytes),
-                                                'sn_of_fragment': -1,
-                                                'more_fragment': -1,
-                                                'timer': 1000,
-                                                'nonce': str(cryptotools.GenerateAEADNonce(), encoding="ascii"),
-                                                'data': random_bytes})
+                'sender_name': self.sender_name,
+                'receiver_name': self.receiver_name,
+                'cover_traffic': 1,
+                'type_of_use': 1,
+                'file_name': self.file_name,
+                'full_data_length': len(self.plain_bytes),
+                'identification': None,
+                'fragment_data_length': len(random_bytes),
+                'sn_of_fragment': -1,
+                'more_fragment': -1,
+                'timer': 1000,
+                'nonce': str(cryptotools.GenerateAEADNonce(), encoding="ascii"),
+                'data': random_bytes})
         # 添加上掩护流量列表,并进行随机混合
         self.unencrypted_fragment_list = data_fragment_list + cover_traffic_fragment_list
         random.shuffle(self.unencrypted_fragment_list)
@@ -236,7 +257,8 @@ class Receiver(Peer):
             if self.unencrypted_fragment_list[i]["full_data_length"] != self.unencrypted_fragment_list[i]["full_data_length"]:
                 return False
         # 检查是不是所有片段的长度加起来等于总长度
-        sn_of_fragment_sum = sum([fragment_element["fragment_data_length"] for fragment_element in self.unencrypted_fragment_list])
+        sn_of_fragment_sum = sum([fragment_element["fragment_data_length"]
+                                  for fragment_element in self.unencrypted_fragment_list])
         if sn_of_fragment_sum != self.unencrypted_fragment_list[0]["full_data_length"]:
             return False
         # 判断是否已经收到了max_sn之前的所有包,如果是的话检查max_sn对应的包是不是最后一个包

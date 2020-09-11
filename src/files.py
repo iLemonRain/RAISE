@@ -150,7 +150,7 @@ class DataFileDecoder(BasicFile):
         self.type_of_use = int(unencrypted_fragment_header_list[3])
         self.file_name = unencrypted_fragment_header_list[4]
         self.full_data_length = int(unencrypted_fragment_header_list[5])
-        self.identification = int(unencrypted_fragment_header_list[6])
+        self.identification = unencrypted_fragment_header_list[6]
         self.fragment_data_length = int(unencrypted_fragment_header_list[7])
         self.sn_of_fragment = int(unencrypted_fragment_header_list[8])
         self.more_fragment = int(unencrypted_fragment_header_list[9])
@@ -190,3 +190,7 @@ class DataFileDecoder(BasicFile):
     # 获得各个数据元素
     def GetFragmentElement(self):
         return self.fragment_element
+
+    # 获取文件的类型
+    def GetTypeOfUse(self):
+        return self.type_of_use
