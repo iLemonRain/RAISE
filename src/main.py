@@ -23,8 +23,8 @@ def sh1_sender():
     # 生成握手文件,并设定掩护流量分片的个数
     sender.GenerateShakeHandFragmentList(2)
     # 将每个分片的组成元素加入文件里面,并发送
-    for fragment_element in sender.GetUnencryptedFragmentList():
-        shake_hand_file_encoder = ShakeHandFileEncoder(fragment_element, sender.GetReceiverPublicKey())
+    for unencrypted_fragment in sender.GetUnencryptedFragmentList():
+        shake_hand_file_encoder = ShakeHandFileEncoder(unencrypted_fragment, sender.GetReceiverPublicKey())
         shake_hand_file_encoder.GenerateEncryptedFile()
         sender.AddToEncryptedFileDirList(shake_hand_file_encoder.GetEncryptedFileDir())
     # 发送所有被加密的文件到仓库
@@ -49,16 +49,16 @@ def sh1_receiver():
         # 从接收到的被加密文件列表中找到本接受者对象想要的内容(发送方和接收方都要求对的上设定)
         for encrypted_file_dir in receiver.GetEncryptedFileDirList():
             data_file_decoder = DataFileDecoder(encrypted_file_dir, receiver.GetReceiverPrivateKey(), receiver.GetSharedKey())
-            # 判断发送者和接收者是不是对的人,以及是不是掩护流量,如果符合条件的话才对这个文件进行处理
-            if data_file_decoder.CheckNameAndCoverTraffic(receiver.GetSenderName(), receiver.GetReceiverName()) is True:
-                data_file_decoder.GenerateFragmentElement()
-                receiver.AddToUnencryptedFragmentList(data_file_decoder.GetFragmentElement())
+            if data_file_decoder.GetTypeOfUse() == 0:  # 握手文件
+                # 判断发送者和接收者是不是对的人,以及是不是掩护流量,如果符合条件的话才对这个文件进行处理
+                if data_file_decoder.CheckNameAndCoverTraffic(receiver.GetSenderName(), receiver.GetReceiverName()) is True:
+                    data_file_decoder.GenerateECDHSharedKey()
         # 判断是不是已经把所有包都接受完全
         if receiver.CheckIntegrity() is True:
             break
         else:
             time.sleep(3)
-    receiver.SortFragmentElementList()
+    receiver.SortUnencryptedFragmentList()
     receiver.SaveOriginalFile("./")
 
 
@@ -76,12 +76,8 @@ def sender():
     # 设定单个数据分片的长度,并进行分片,并设定真实分片和掩护流量分片的比例
     sender.GenerateDataFragmentList("./testfiles/原图.png", int(329 / 5), 1)
     # 将每个分片的组成元素加入文件里面,并发送
-    for fragment_element in sender.GetUnencryptedFragmentList():
-        data_file_encoder = DataFileEncoder(
-            fragment_element,
-            sender.GetRepoDir(),
-            sender.GetReceiverPublicKey(),
-            sender.GetSharedKey())
+    for unencrypted_fragment in sender.GetUnencryptedFragmentList():
+        data_file_encoder = DataFileEncoder(unencrypted_fragment, sender.GetRepoDir(), sender.GetReceiverPublicKey(), sender.GetSharedKey())
         data_file_encoder.GenerateEncryptedFile()
         sender.AddToEncryptedFileDirList(data_file_encoder.GetEncryptedFileDir())
     # 发送所有被加密的文件到仓库
@@ -110,14 +106,14 @@ def receiver():
             if data_file_decoder.GetTypeOfUse() == 1:  # 数据传输文件
                 # 判断发送者和接收者是不是对的人,以及是不是掩护流量,如果符合条件的话才对这个文件进行处理
                 if data_file_decoder.CheckNameAndCoverTraffic(receiver.GetSenderName(), receiver.GetReceiverName()) is True:
-                    data_file_decoder.GenerateFragmentElement()
-                    receiver.AddToUnencryptedFragmentList(data_file_decoder.GetFragmentElement())
+                    data_file_decoder.GenerateDataFragmentList()
+                    receiver.AddToUnencryptedFragmentList(data_file_decoder.GetDataFragmentList())
         # 判断是不是已经把所有包都接受完全
         if receiver.CheckIntegrity() is True:
             break
         else:
             time.sleep(3)
-    receiver.SortFragmentElementList()
+    receiver.SortUnencryptedFragmentList()
     receiver.SaveOriginalFile("./")
 
 

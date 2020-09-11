@@ -7,7 +7,7 @@ class BasicFile(object):
     # 构造函数
     def __init__(self):
         # 包元素的整体
-        self.fragment_element = {}              # 含有所有的包元素
+        self.unencrypted_fragment = {}              # 含有所有的包元素
         # 文件名中的内容
         self.sender_name = None                 # 发送方的名字或代号
         self.receiver_name = None               # 接收方的名字或代号
@@ -45,12 +45,12 @@ class BasicFile(object):
 # 发送方对握手文件进行的处理,目的是生成握手文件
 class ShakeHandFileEncoder(BasicFile):
     # 构造函数
-    def __init__(self, fragment_element):
-        self.fragment_element = fragment_element
-        self.sender_name = self.fragment_element['sender_name']
-        self.receiver_name = self.fragment_element['receiver_name']
-        self.type_of_use = self.fragment_element['type_of_use']
-        self.full_data_length = self.fragment_element['full_data_length']
+    def __init__(self, unencrypted_fragment):
+        self.unencrypted_fragment = unencrypted_fragment
+        self.sender_name = self.unencrypted_fragment['sender_name']
+        self.receiver_name = self.unencrypted_fragment['receiver_name']
+        self.type_of_use = self.unencrypted_fragment['type_of_use']
+        self.full_data_length = self.unencrypted_fragment['full_data_length']
 
     # 生成握手用的pem文件
     def GenerateShakeHandFile(self):
@@ -71,7 +71,7 @@ class ShakeHandFileDecoder(BasicFile):
 # 对单个文件的加密处理
 class DataFileEncoder(BasicFile):
     # 构造函数
-    def __init__(self, fragment_element, repo_dir, receiver_public_key, shared_key):
+    def __init__(self, unencrypted_fragment, repo_dir, receiver_public_key, shared_key):
         # 从基类引入基础属性
         super(DataFileEncoder, self).__init__()
         # 密钥
@@ -80,23 +80,23 @@ class DataFileEncoder(BasicFile):
         # 仓库地址
         self.repo_dir = repo_dir
         # 获得包头部元素
-        self.fragment_element = fragment_element
-        self.sender_name = self.fragment_element['sender_name']
-        self.receiver_name = self.fragment_element['receiver_name']
-        self.cover_traffic = self.fragment_element['cover_traffic']
-        self.type_of_use = self.fragment_element['type_of_use']
-        self.file_name = self.fragment_element['file_name']
-        self.full_data_length = self.fragment_element['full_data_length']
-        self.identification = self.fragment_element['identification']
-        self.fragment_data_length = self.fragment_element['fragment_data_length']
-        self.sn_of_fragment = self.fragment_element['sn_of_fragment']
-        self.more_fragment = self.fragment_element['more_fragment']
-        self.timer = self.fragment_element['timer']
-        self.nonce = bytes(self.fragment_element['nonce'], encoding="ascii")
+        self.unencrypted_fragment = unencrypted_fragment
+        self.sender_name = self.unencrypted_fragment['sender_name']
+        self.receiver_name = self.unencrypted_fragment['receiver_name']
+        self.cover_traffic = self.unencrypted_fragment['cover_traffic']
+        self.type_of_use = self.unencrypted_fragment['type_of_use']
+        self.file_name = self.unencrypted_fragment['file_name']
+        self.full_data_length = self.unencrypted_fragment['full_data_length']
+        self.identification = self.unencrypted_fragment['identification']
+        self.fragment_data_length = self.unencrypted_fragment['fragment_data_length']
+        self.sn_of_fragment = self.unencrypted_fragment['sn_of_fragment']
+        self.more_fragment = self.unencrypted_fragment['more_fragment']
+        self.timer = self.unencrypted_fragment['timer']
+        self.nonce = bytes(self.unencrypted_fragment['nonce'], encoding="ascii")
         # 获得包数据部分
-        self.data = self.fragment_element['data']
+        self.data = self.unencrypted_fragment['data']
         # 获得加密的头部和数据
-        self.unencrypted_fragment_header = " ".join([str(i) for i in list(fragment_element.values())[0:-1]])  # 将头部元素压缩成字符串
+        self.unencrypted_fragment_header = " ".join([str(i) for i in list(unencrypted_fragment.values())[0:-1]])  # 将头部元素压缩成字符串
         self.unencrypted_fragment_data = self.data
 
     # 获取未加密的头部(文件名)字符串
@@ -164,32 +164,39 @@ class DataFileDecoder(BasicFile):
                 return True
         return False
 
-    # 生成包含各个元素的数据包
-    def GenerateFragmentElement(self):
+    # 获得共享的对称密钥
+    def GenerateECDHSharedKey(self):
+        with open(self.encrypted_file_dir, 'rb') as f:
+            self.encrypted_fragment_data = f.read()
+        self.unencrypted_fragment_data = cryptotools.RSADecodeData(self.encrypted_fragment_header, self.receiver_private_key).decode('utf-8')
+        print(self.unencrypted_fragment_data)
+
+    # 解密一个文件并拆出里面的元素
+    def GenerateDataFragmentList(self):
         with open(self.encrypted_file_dir, 'rb') as f:
             self.encrypted_fragment_data = f.read()
         chacha = cryptotools.CC20P1305Init(self.shared_key)
         self.unencrypted_fragment_data = cryptotools.CC20P1305Decrypt(chacha, self.nonce, self.encrypted_fragment_data)
         self.data = self.unencrypted_fragment_data
         # 打包
-        self.fragment_element['sender_name'] = self.sender_name
-        self.fragment_element['receiver_name'] = self.receiver_name
-        self.fragment_element['cover_traffic'] = self.cover_traffic
-        self.fragment_element['type_of_use'] = self.type_of_use
-        self.fragment_element['file_name'] = self.file_name
-        self.fragment_element['full_data_length'] = self.full_data_length
-        self.fragment_element['identification'] = self.identification
-        self.fragment_element['fragment_data_length'] = self.fragment_data_length
-        self.fragment_element['sn_of_fragment'] = self.sn_of_fragment
-        self.fragment_element['more_fragment'] = self.more_fragment
-        self.fragment_element['data'] = self.data
-        self.fragment_element['file_dir'] = self.encrypted_file_dir
-        self.fragment_element['timer'] = self.timer
-        self.fragment_element['nonce'] = self.nonce
+        self.unencrypted_fragment['sender_name'] = self.sender_name
+        self.unencrypted_fragment['receiver_name'] = self.receiver_name
+        self.unencrypted_fragment['cover_traffic'] = self.cover_traffic
+        self.unencrypted_fragment['type_of_use'] = self.type_of_use
+        self.unencrypted_fragment['file_name'] = self.file_name
+        self.unencrypted_fragment['full_data_length'] = self.full_data_length
+        self.unencrypted_fragment['identification'] = self.identification
+        self.unencrypted_fragment['fragment_data_length'] = self.fragment_data_length
+        self.unencrypted_fragment['sn_of_fragment'] = self.sn_of_fragment
+        self.unencrypted_fragment['more_fragment'] = self.more_fragment
+        self.unencrypted_fragment['data'] = self.data
+        self.unencrypted_fragment['file_dir'] = self.encrypted_file_dir
+        self.unencrypted_fragment['timer'] = self.timer
+        self.unencrypted_fragment['nonce'] = self.nonce
 
     # 获得各个数据元素
-    def GetFragmentElement(self):
-        return self.fragment_element
+    def GetDataFragmentList(self):
+        return self.unencrypted_fragment
 
     # 获取文件的类型
     def GetTypeOfUse(self):

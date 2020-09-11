@@ -106,20 +106,21 @@ class Sender(Peer):
     def GenerateShakeHandFragmentList(self, cover_traffic_fragment_num):
         with open(self.ecdh_local_public_key_dir, 'rb') as f:
             self.plain_bytes = f.read()
-        data_fragment_list = [].append({
-                                       'sender_name': self.sender_name,
-                                       'receiver_name': self.receiver_name,
-                                       'cover_traffic': 0,
-                                       'type_of_use': 0,
-                                       'file_name': None,
-                                       'full_data_length': len(self.plain_bytes),
-                                       'identification': None,
-                                       'fragment_data_length': len(self.plain_bytes),
-                                       'sn_of_fragment': None,
-                                       'more_fragment': None,
-                                       'timer': 1000,
-                                       'nonce': None,
-                                       'data': self.plain_bytes})
+            print(self.plain_bytes)
+        data_fragment_list = []
+        data_fragment_list.append({'sender_name': self.sender_name,
+                                   'receiver_name': self.receiver_name,
+                                   'cover_traffic': 0,
+                                   'type_of_use': 0,
+                                   'file_name': None,
+                                   'full_data_length': len(self.plain_bytes),
+                                   'identification': None,
+                                   'fragment_data_length': len(self.plain_bytes),
+                                   'sn_of_fragment': None,
+                                   'more_fragment': None,
+                                   'timer': 1000,
+                                   'nonce': None,
+                                   'data': self.plain_bytes})
         cover_traffic_fragment_list = []
         for i in range(0, cover_traffic_fragment_num):
             random_bytes = os.urandom(20)  # 这就是随便定了个数
@@ -247,8 +248,8 @@ class Receiver(Peer):
         return self.encrypted_file_dir_list
 
     # 将收到的元素组合包加入包列表
-    def AddToUnencryptedFragmentList(self, fragment_element):
-        self.unencrypted_fragment_list.append(fragment_element)
+    def AddToUnencryptedFragmentList(self, unencrypted_fragment):
+        self.unencrypted_fragment_list.append(unencrypted_fragment)
 
     # 检查当前有没有接收完所有的包
     def CheckIntegrity(self):
@@ -257,28 +258,28 @@ class Receiver(Peer):
             if self.unencrypted_fragment_list[i]["full_data_length"] != self.unencrypted_fragment_list[i]["full_data_length"]:
                 return False
         # 检查是不是所有片段的长度加起来等于总长度
-        sn_of_fragment_sum = sum([fragment_element["fragment_data_length"]
-                                  for fragment_element in self.unencrypted_fragment_list])
+        sn_of_fragment_sum = sum([unencrypted_fragment["fragment_data_length"]
+                                  for unencrypted_fragment in self.unencrypted_fragment_list])
         if sn_of_fragment_sum != self.unencrypted_fragment_list[0]["full_data_length"]:
             return False
         # 判断是否已经收到了max_sn之前的所有包,如果是的话检查max_sn对应的包是不是最后一个包
-        sn_of_fragment_list = [fragment_element["sn_of_fragment"] for fragment_element in self.unencrypted_fragment_list]
+        sn_of_fragment_list = [unencrypted_fragment["sn_of_fragment"] for unencrypted_fragment in self.unencrypted_fragment_list]
         max_sn = max(sn_of_fragment_list)
         if set(sn_of_fragment_list) == set([i for i in range(0, max_sn + 1)]):
-            for fragment_element in self.unencrypted_fragment_list:
-                if fragment_element['sn_of_fragment'] == max_sn and fragment_element['more_fragment'] == 0:
-                    self.file_name = fragment_element['file_name']
+            for unencrypted_fragment in self.unencrypted_fragment_list:
+                if unencrypted_fragment['sn_of_fragment'] == max_sn and unencrypted_fragment['more_fragment'] == 0:
+                    self.file_name = unencrypted_fragment['file_name']
                     return True  # 已经是最后一个包,证明接收完全
         return False
 
     # 将包元素列表进行排序
     # @functiontimer.fn_timer
-    def SortFragmentElementList(self):
+    def SortUnencryptedFragmentList(self):
         self.unencrypted_fragment_list = sorted(self.unencrypted_fragment_list, key=lambda keys: keys['sn_of_fragment'])
 
     # 由各包元素生成明文
     def SaveOriginalFile(self, file_folder_dir):
-        self.plain_bytes = b"".join([fragment_element["data"] for fragment_element in self.unencrypted_fragment_list])
+        self.plain_bytes = b"".join([unencrypted_fragment["data"] for unencrypted_fragment in self.unencrypted_fragment_list])
         with open(self.file_name, 'wb+')as f:
             f.write(self.plain_bytes)
 
