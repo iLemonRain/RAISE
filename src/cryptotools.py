@@ -1,6 +1,7 @@
 # 和加解密相关的操作
 import functiontimer
 import random
+import math
 import string
 import rsa
 import base64
@@ -36,13 +37,38 @@ def GetRSAPrivateKey(private_key_file_dir):
 
 # 使用对方的公钥文件,来加密信息,并返回加密信息
 def RSAEncodeData(data, public_key):
-    data = data.encode('utf-8')
-    return str(base64.standard_b64encode(rsa.encrypt(data, public_key)), encoding="utf-8").replace("/", "$")
+    default_length = 117
+    if type(data) == bytes:
+        unencrypted_data_list = [data[i:i+default_length] for i in range(0, len(data), default_length)]
+        encrypted_data = b""
+        for unencrypted_data in unencrypted_data_list:
+            encrypted_data += rsa.encrypt(unencrypted_data, public_key)
+        return encrypted_data
+    elif type(data) == str:
+        data = data.encode('utf-8')
+        unencrypted_data_list = [data[i:i+default_length] for i in range(0, len(data), default_length)]
+        encrypted_data = b""
+        for unencrypted_data in unencrypted_data_list:
+            encrypted_data += rsa.encrypt(unencrypted_data, public_key)
+        return str(base64.standard_b64encode(encrypted_data), encoding="utf-8").replace("/", "$")
 
 
 # 使用自己的私钥文件,来解密信息,并返回解密信息
 def RSADecodeData(data, private_key):
-    return rsa.decrypt(base64.standard_b64decode(data.replace("$", "/")), private_key)
+    default_length = 128
+    if type(data) == bytes:
+        encrypted_data_list = [data[i:i+default_length] for i in range(0, len(data), default_length)]
+        unencrypted_data = b""
+        for encrypted_data in encrypted_data_list:
+            unencrypted_data += rsa.decrypt(encrypted_data, private_key)
+        return unencrypted_data
+    elif type(data) == str:
+        data = base64.standard_b64decode(data.replace("$", "/"))
+        encrypted_data_list = [data[i:i+default_length] for i in range(0, len(data), default_length)]
+        unencrypted_data = b""
+        for encrypted_data in encrypted_data_list:
+            unencrypted_data += rsa.decrypt(encrypted_data, private_key)
+        return unencrypted_data
 
 
 # 根据椭圆曲线类型,初始化ECDH

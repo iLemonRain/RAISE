@@ -4,7 +4,7 @@ from users import Sender, Receiver
 import os
 import time
 import functiontimer
-
+import cryptotools
 
 @functiontimer.fn_timer
 def sh1_sender():
@@ -18,15 +18,15 @@ def sh1_sender():
     # 设定接收方公钥
     sender.SetReceiverPublicKey("./config/remote_publickey.pem")
     # 开始握手
-    sender.InitECDH()
+    sender.InitECDH(ecdh_lemon)
     sender.GenerateLocalECDHPublicKey("./config/local_ECDH_publickey.pem")
     # 生成握手文件,并设定掩护流量分片的个数
     sender.GenerateShakeHandFragmentList(2)
     # 将每个分片的组成元素加入文件里面,并发送
     for unencrypted_fragment in sender.GetUnencryptedFragmentList():
-        shake_hand_file_encoder = ShakeHandFileEncoder(unencrypted_fragment, sender.GetReceiverPublicKey())
-        shake_hand_file_encoder.GenerateEncryptedFile()
-        sender.AddToEncryptedFileDirList(shake_hand_file_encoder.GetEncryptedFileDir())
+        data_file_encoder = DataFileEncoder(unencrypted_fragment, sender.GetRepoDir(), sender.GetReceiverPublicKey(), sender.GetSharedKey())
+        data_file_encoder.GenerateEncryptedFile()
+        sender.AddToEncryptedFileDirList(data_file_encoder.GetEncryptedFileDir())
     # 发送所有被加密的文件到仓库
     sender.SendEncryptedFileList(platform="Github")
     del sender
@@ -41,25 +41,67 @@ def sh1_receiver():
     receiver.SetReceiverName("cherry")
     # 设定仓库信息
     receiver.SetRepoDir("./repo_receive", "https://gitee.com/iLemonRain/raise_data.git")
+    receiver.InitECDH(ecdh_cherry)
     # 设定接收方私钥
     receiver.SetReceiverPrivateKey("./config/remote_privatekey.pem")
-    while True:
-        # 从仓库pull最新的被加密的文件,并生成加密文件列表
-        receiver.ReceiveEncryptedFileList(platform="Github")
-        # 从接收到的被加密文件列表中找到本接受者对象想要的内容(发送方和接收方都要求对的上设定)
-        for encrypted_file_dir in receiver.GetEncryptedFileDirList():
-            data_file_decoder = DataFileDecoder(encrypted_file_dir, receiver.GetReceiverPrivateKey(), receiver.GetSharedKey())
-            if data_file_decoder.GetTypeOfUse() == 0:  # 握手文件
-                # 判断发送者和接收者是不是对的人,以及是不是掩护流量,如果符合条件的话才对这个文件进行处理
-                if data_file_decoder.CheckNameAndCoverTraffic(receiver.GetSenderName(), receiver.GetReceiverName()) is True:
-                    data_file_decoder.GenerateECDHSharedKey()
-        # 判断是不是已经把所有包都接受完全
-        if receiver.CheckIntegrity() is True:
-            break
-        else:
-            time.sleep(3)
-    receiver.SortUnencryptedFragmentList()
-    receiver.SaveOriginalFile("./")
+    # 从仓库pull最新的被加密的文件,并生成加密文件列表
+    receiver.ReceiveEncryptedFileList(platform="Github")
+    # 从接收到的被加密文件列表中找到本接受者对象想要的内容(发送方和接收方都要求对的上设定)
+    for encrypted_file_dir in receiver.GetEncryptedFileDirList():
+        data_file_decoder = DataFileDecoder(encrypted_file_dir, receiver.GetReceiverPrivateKey(), receiver.GetSharedKey())
+        if data_file_decoder.GetTypeOfUse() == 0:  # 握手文件
+            # 判断发送者和接收者是不是对的人,以及是不是掩护流量,如果符合条件的话才对这个文件进行处理
+            if data_file_decoder.CheckNameAndCoverTraffic(receiver.GetSenderName(), receiver.GetReceiverName()) is True:
+                receiver.GenerateECDHSharedKey(data_file_decoder.GetRemoteECDHPublicKey())
+
+
+@functiontimer.fn_timer
+def sh2_sender():
+    # 建立一个发送方对象,之后可以定期向仓库推送发给不同接收者的内容
+    sender = Sender()
+    # 设定发送者和接收者的代号
+    sender.SetSenderName("cherry")
+    sender.SetReceiverName("lemon")
+    # 设定仓库信息
+    sender.SetRepoDir('./repo_send', "https://gitee.com/iLemonRain/raise_data.git")
+    # 设定接收方公钥
+    sender.SetReceiverPublicKey("./config/local_publickey.pem")
+    # 开始握手
+    sender.InitECDH(ecdh_cherry)
+    sender.GenerateLocalECDHPublicKey("./config/remote_ECDH_publickey.pem")
+    # 生成握手文件,并设定掩护流量分片的个数
+    sender.GenerateShakeHandFragmentList(2)
+    # 将每个分片的组成元素加入文件里面,并发送
+    for unencrypted_fragment in sender.GetUnencryptedFragmentList():
+        data_file_encoder = DataFileEncoder(unencrypted_fragment, sender.GetRepoDir(), sender.GetReceiverPublicKey(), sender.GetSharedKey())
+        data_file_encoder.GenerateEncryptedFile()
+        sender.AddToEncryptedFileDirList(data_file_encoder.GetEncryptedFileDir())
+    # 发送所有被加密的文件到仓库
+    sender.SendEncryptedFileList(platform="Github")
+    del sender
+
+
+@functiontimer.fn_timer
+def sh2_receiver():
+    # 建立一个接收方对象,之后可以定期从仓库拉取不同发送者的内容
+    receiver = Receiver()
+    # 设定发送者和接收者的代号
+    receiver.SetSenderName("cherry")
+    receiver.SetReceiverName("lemon")
+    # 设定仓库信息
+    receiver.SetRepoDir("./repo_receive", "https://gitee.com/iLemonRain/raise_data.git")
+    # 设定接收方私钥
+    receiver.SetReceiverPrivateKey("./config/local_privatekey.pem")
+    receiver.InitECDH(ecdh_lemon)
+    # 从仓库pull最新的被加密的文件,并生成加密文件列表
+    receiver.ReceiveEncryptedFileList(platform="Github")
+    # 从接收到的被加密文件列表中找到本接受者对象想要的内容(发送方和接收方都要求对的上设定)
+    for encrypted_file_dir in receiver.GetEncryptedFileDirList():
+        data_file_decoder = DataFileDecoder(encrypted_file_dir, receiver.GetReceiverPrivateKey(), receiver.GetSharedKey())
+        if data_file_decoder.GetTypeOfUse() == 0:  # 握手文件
+            # 判断发送者和接收者是不是对的人,以及是不是掩护流量,如果符合条件的话才对这个文件进行处理
+            if data_file_decoder.CheckNameAndCoverTraffic(receiver.GetSenderName(), receiver.GetReceiverName()) is True:
+                receiver.GenerateECDHSharedKey(data_file_decoder.GetRemoteECDHPublicKey())
 
 
 @functiontimer.fn_timer
@@ -121,6 +163,12 @@ if __name__ == '__main__':
     # 不管用户从什么位置用终端执行此py文件,都将根目录设置为此工程根目录
     work_dir = os.path.abspath(os.path.join(__file__, "../.."))
     os.chdir(work_dir)
-    sender()
-    receiver()
-    # sh1_sender()
+    # 暂时需要指定ECDH
+    ecdh_lemon = cryptotools.ECDHInit()
+    ecdh_cherry = cryptotools.ECDHInit()
+    sh1_sender()
+    sh1_receiver()
+    sh2_sender()
+    sh2_receiver()
+    # sender()
+    # receiver()

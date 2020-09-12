@@ -75,6 +75,10 @@ class Peer(object):
     def GetSharedKey(self):
         return self.shared_key
 
+    # 初始化ECDH(暂时为指定模式)
+    def InitECDH(self, ecdh):
+        self.ecdh = ecdh
+
 
 # 发送方的属性和基本方法
 class Sender(Peer):
@@ -93,10 +97,6 @@ class Sender(Peer):
     def GetReceiverPublicKey(self):
         return self.receiver_public_key
 
-    # 初始化ECDH
-    def InitECDH(self):
-        self.ecdh = cryptotools.ECDHInit()
-
     # 初始化ECDH,并生成ECDH临时公钥
     def GenerateLocalECDHPublicKey(self, ecdh_local_public_key_dir):
         cryptotools.GenerateECDHPublicKey(self.ecdh, ecdh_local_public_key_dir)
@@ -106,34 +106,33 @@ class Sender(Peer):
     def GenerateShakeHandFragmentList(self, cover_traffic_fragment_num):
         with open(self.ecdh_local_public_key_dir, 'rb') as f:
             self.plain_bytes = f.read()
-            print(self.plain_bytes)
         data_fragment_list = []
         data_fragment_list.append({'sender_name': self.sender_name,
                                    'receiver_name': self.receiver_name,
                                    'cover_traffic': 0,
                                    'type_of_use': 0,
-                                   'file_name': None,
+                                   'file_name': -1,
                                    'full_data_length': len(self.plain_bytes),
-                                   'identification': None,
+                                   'identification': -1,
                                    'fragment_data_length': len(self.plain_bytes),
-                                   'sn_of_fragment': None,
-                                   'more_fragment': None,
+                                   'sn_of_fragment': -1,
+                                   'more_fragment': -1,
                                    'timer': 1000,
                                    'nonce': None,
                                    'data': self.plain_bytes})
         cover_traffic_fragment_list = []
         for i in range(0, cover_traffic_fragment_num):
-            random_bytes = os.urandom(20)  # 这就是随便定了个数
+            random_bytes = os.urandom(len(self.plain_bytes))  # 这就是随便定了个数
             cover_traffic_fragment_list.append({'sender_name': self.sender_name,
                                                 'receiver_name': self.receiver_name,
                                                 'cover_traffic': 1,
                                                 'type_of_use': 0,
-                                                'file_name': None,
-                                                'full_data_length': len(random_bytes),
-                                                'identification': None,
-                                                'fragment_data_length': len(random_bytes),
-                                                'sn_of_fragment': None,
-                                                'more_fragment': None,
+                                                'file_name': -1,
+                                                'full_data_length': len(self.plain_bytes),
+                                                'identification': -1,
+                                                'fragment_data_length': len(self.plain_bytes),
+                                                'sn_of_fragment': -1,
+                                                'more_fragment': -1,
                                                 'timer': 1000,
                                                 'nonce': None,
                                                 'data': random_bytes})
@@ -159,7 +158,7 @@ class Sender(Peer):
                 'type_of_use': 1,
                 'file_name': self.file_name,
                 'full_data_length': len(self.plain_bytes),
-                'identification': None,
+                'identification': -1,
                 'fragment_data_length': len(self.plain_bytes[i:i + fragment_data_length]),
                 'sn_of_fragment': sn_of_fragment,
                 'more_fragment': 0 if sn_of_fragment == real_fragment_num - 1 else 1,
@@ -178,7 +177,7 @@ class Sender(Peer):
                 'type_of_use': 1,
                 'file_name': self.file_name,
                 'full_data_length': len(self.plain_bytes),
-                'identification': None,
+                'identification': -1,
                 'fragment_data_length': len(random_bytes),
                 'sn_of_fragment': -1,
                 'more_fragment': -1,
@@ -250,6 +249,12 @@ class Receiver(Peer):
     # 将收到的元素组合包加入包列表
     def AddToUnencryptedFragmentList(self, unencrypted_fragment):
         self.unencrypted_fragment_list.append(unencrypted_fragment)
+
+    # 使用ECDH生成对称秘钥
+    def GenerateECDHSharedKey(self, remote_ecdh_public_key):
+        self.ecdh.load_received_public_key_pem(remote_ecdh_public_key)
+        shared_key = self.ecdh.generate_sharedsecret_bytes()
+        print(shared_key)
 
     # 检查当前有没有接收完所有的包
     def CheckIntegrity(self):

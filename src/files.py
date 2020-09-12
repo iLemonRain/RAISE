@@ -45,7 +45,7 @@ class BasicFile(object):
 # 发送方对握手文件进行的处理,目的是生成握手文件
 class ShakeHandFileEncoder(BasicFile):
     # 构造函数
-    def __init__(self, unencrypted_fragment):
+    def __init__(self, unencrypted_fragment, receiver_public_key):
         self.unencrypted_fragment = unencrypted_fragment
         self.sender_name = self.unencrypted_fragment['sender_name']
         self.receiver_name = self.unencrypted_fragment['receiver_name']
@@ -92,7 +92,7 @@ class DataFileEncoder(BasicFile):
         self.sn_of_fragment = self.unencrypted_fragment['sn_of_fragment']
         self.more_fragment = self.unencrypted_fragment['more_fragment']
         self.timer = self.unencrypted_fragment['timer']
-        self.nonce = bytes(self.unencrypted_fragment['nonce'], encoding="ascii")
+        self.nonce = bytes(self.unencrypted_fragment['nonce'], encoding="ascii") if self.unencrypted_fragment['nonce'] is not None else None
         # 获得包数据部分
         self.data = self.unencrypted_fragment['data']
         # 获得加密的头部和数据
@@ -118,8 +118,11 @@ class DataFileEncoder(BasicFile):
     # 加密文件,并设定加密的文件的目录.注意这里的目录是相对于仓库的目录
     def GenerateEncryptedFile(self):
         self.encrypted_fragment_header = cryptotools.RSAEncodeData(self.unencrypted_fragment_header, self.receiver_public_key)
-        chacha = cryptotools.CC20P1305Init(self.shared_key)
-        self.encrypted_fragment_data = cryptotools.CC20P1305Encrypt(chacha, self.nonce, self.unencrypted_fragment_data)
+        if self.type_of_use == 0:
+            self.encrypted_fragment_data = cryptotools.RSAEncodeData(self.unencrypted_fragment_data, self.receiver_public_key)
+        elif self.type_of_use == 1:
+            chacha = cryptotools.CC20P1305Init(self.shared_key)
+            self.encrypted_fragment_data = cryptotools.CC20P1305Encrypt(chacha, self.nonce, self.unencrypted_fragment_data)
         self.encrypted_file_dir = self.repo_dir + "/" + self.encrypted_fragment_header
         with open(self.encrypted_file_dir, 'wb') as f:
             f.write(self.encrypted_fragment_data)
@@ -156,6 +159,8 @@ class DataFileDecoder(BasicFile):
         self.more_fragment = int(unencrypted_fragment_header_list[9])
         self.timer = int(unencrypted_fragment_header_list[10])
         self.nonce = bytes(unencrypted_fragment_header_list[11], encoding="ascii")
+        # 对方的ECDH公钥(握手过程专用)
+        self.remote_ecdh_public_key = None
 
     # 根据文件名检查发送方和接收方的名称,以及是不是掩护流量,决定这个文件是继续分析还是丢弃
     def CheckNameAndCoverTraffic(self, sender_name, receiver_name):
@@ -164,12 +169,12 @@ class DataFileDecoder(BasicFile):
                 return True
         return False
 
-    # 获得共享的对称密钥
-    def GenerateECDHSharedKey(self):
+    # 获得对方的ECDH公钥
+    def GetRemoteECDHPublicKey(self):
         with open(self.encrypted_file_dir, 'rb') as f:
             self.encrypted_fragment_data = f.read()
-        self.unencrypted_fragment_data = cryptotools.RSADecodeData(self.encrypted_fragment_header, self.receiver_private_key).decode('utf-8')
-        print(self.unencrypted_fragment_data)
+        self.remote_ecdh_public_key = cryptotools.RSADecodeData(self.encrypted_fragment_data, self.receiver_private_key).decode('utf-8')
+        return self.remote_ecdh_public_key
 
     # 解密一个文件并拆出里面的元素
     def GenerateDataFragmentList(self):
