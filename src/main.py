@@ -16,10 +16,10 @@ def sh1_sender():
     # 设定仓库信息
     sender.SetRepoDir('./repo_send', "https://gitee.com/iLemonRain/raise_data.git")
     # 设定接收方公钥
-    sender.SetReceiverPublicKey("./config/remote_publickey.pem")
+    sender.SetReceiverPublicKey("./config/cherry_public_key.pem")
     # 开始握手
     sender.InitECDH(ecdh_lemon)
-    sender.GenerateLocalECDHPublicKey("./config/local_ECDH_publickey.pem")
+    sender.GenerateLocalECDHPublicKey("./config/lemon_ECDH_public_key.pem")
     # 生成握手文件,并设定掩护流量分片的个数
     sender.GenerateShakeHandFragmentList(2)
     # 将每个分片的组成元素加入文件里面,并发送
@@ -43,7 +43,7 @@ def sh1_receiver():
     receiver.SetRepoDir("./repo_receive", "https://gitee.com/iLemonRain/raise_data.git")
     receiver.InitECDH(ecdh_cherry)
     # 设定接收方私钥
-    receiver.SetReceiverPrivateKey("./config/remote_privatekey.pem")
+    receiver.SetReceiverPrivateKey("./config/cherry_private_key.pem")
     # 从仓库pull最新的被加密的文件,并生成加密文件列表
     receiver.ReceiveEncryptedFileList(platform="Github")
     # 从接收到的被加密文件列表中找到本接受者对象想要的内容(发送方和接收方都要求对的上设定)
@@ -65,10 +65,10 @@ def sh2_sender():
     # 设定仓库信息
     sender.SetRepoDir('./repo_send', "https://gitee.com/iLemonRain/raise_data.git")
     # 设定接收方公钥
-    sender.SetReceiverPublicKey("./config/local_publickey.pem")
+    sender.SetReceiverPublicKey("./config/lemon_public_key.pem")
     # 开始握手
     sender.InitECDH(ecdh_cherry)
-    sender.GenerateLocalECDHPublicKey("./config/remote_ECDH_publickey.pem")
+    sender.GenerateLocalECDHPublicKey("./config/cherry_ECDH_public_key.pem")
     # 生成握手文件,并设定掩护流量分片的个数
     sender.GenerateShakeHandFragmentList(2)
     # 将每个分片的组成元素加入文件里面,并发送
@@ -91,7 +91,7 @@ def sh2_receiver():
     # 设定仓库信息
     receiver.SetRepoDir("./repo_receive", "https://gitee.com/iLemonRain/raise_data.git")
     # 设定接收方私钥
-    receiver.SetReceiverPrivateKey("./config/local_privatekey.pem")
+    receiver.SetReceiverPrivateKey("./config/lemon_private_key.pem")
     receiver.InitECDH(ecdh_lemon)
     # 从仓库pull最新的被加密的文件,并生成加密文件列表
     receiver.ReceiveEncryptedFileList(platform="Github")
@@ -114,7 +114,7 @@ def sender():
     # 设定仓库信息
     sender.SetRepoDir('./repo_send', "https://gitee.com/iLemonRain/raise_data.git")
     # 设定接收方公钥
-    sender.SetReceiverPublicKey("./config/remote_publickey.pem")
+    sender.SetReceiverPublicKey("./config/cherry_public_key.pem")
     # 设定单个数据分片的长度,并进行分片,并设定真实分片和掩护流量分片的比例
     sender.GenerateDataFragmentList("./testfiles/原图.png", int(329 / 5), 1)
     # 将每个分片的组成元素加入文件里面,并发送
@@ -137,7 +137,7 @@ def receiver():
     # 设定仓库信息
     receiver.SetRepoDir("./repo_receive", "https://gitee.com/iLemonRain/raise_data.git")
     # 设定接收方私钥
-    receiver.SetReceiverPrivateKey("./config/remote_privatekey.pem")
+    receiver.SetReceiverPrivateKey("./config/chry_private_key.pem")
     while True:
         # 从仓库pull最新的被加密的文件,并生成加密文件列表
         receiver.ReceiveEncryptedFileList(platform="Github")

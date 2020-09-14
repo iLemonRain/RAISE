@@ -14,10 +14,10 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 def GenerateRSAKeyFile(bit_num):
     (pubkey, private_key) = rsa.newkeys(bit_num)
     pub = pubkey.save_pkcs1()
-    with open('./config/local_publickey.pem', 'wb+')as f:
+    with open('./config/local_public_key.pem', 'wb+')as f:
         f.write(pub)
     pri = private_key.save_pkcs1()
-    with open('./config/local_privatekey.pem', 'wb+')as f:
+    with open('./config/local_private_key.pem', 'wb+')as f:
         f.write(pri)
 
 
@@ -147,10 +147,10 @@ def AES256GCMDecrypt(aesgcm, nonce, encrypted_data):
 if __name__ == '__main__':
     # 模拟RSA
     GenerateRSAKeyFile(1024)
-    public_key = GetRSAPublicKey('./config/remote_publickey.pem')
+    public_key = GetRSAPublicKey('./config/remote_public_key.pem')
     crypto = RSAEncodeData("Hi! Someone stoled my email and my steam account rus_lemonrain at IP 223.152.11.11 several hours ago432435775243432", public_key)
     print(len(crypto))
-    private_key = GetRSAPrivateKey('./config/remote_privatekey.pem')
+    private_key = GetRSAPrivateKey('./config/remote_private_key.pem')
     message1 = RSADecodeData(crypto, private_key)
     print(message1.decode('utf-8'))
 
